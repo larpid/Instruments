@@ -87,3 +87,4 @@
 190315 14:28:04 S/N:117018374 - Controller reports Error Code: 10
 190315 14:28:44 S/N:117018374 - Controller reports Error Code: 10
 190322 18:02:29 S/N:117018374 - Controller reports Error Code: 2
+190417 17:17:04 S/N:117018374 - Controller reports Error Code: 2
