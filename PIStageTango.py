@@ -30,7 +30,7 @@ class PIStageTango(Device, metaclass=DeviceMeta):
         if self.stage.connect():
             self.set_state(DevState.ON)
         else:
-            self.set_state(DevState.OFF)
+            self.set_state(DevState.FAULT)
 
     def write_cmd_connect(self, _):
         self.connect()
