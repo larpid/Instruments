@@ -12,6 +12,22 @@ from PyTango.server import Device, DeviceMeta
 from PyTango.server import attribute, command, pipe
 
 
+class StoreStdOut(object):
+    """Helper Class to store last stdout message"""
+
+    def __init__(self):
+        self.terminal = sys.stdout
+        self.last_message = ''
+
+    def write(self, message):
+        self.terminal.write(message)
+        if message != '\n':
+            self.last_message = message
+
+    def read(self):
+        return self.last_message
+
+
 class PIStageTango(Device, metaclass=DeviceMeta):
 
     controller_serial_number = sys.argv[1]
@@ -21,6 +37,8 @@ class PIStageTango(Device, metaclass=DeviceMeta):
     def init_device(self):
         Device.init_device(self)
         self.set_state(DevState.OFF)
+        # redirect stdout to store last line
+        sys.stdout = StoreStdOut()
 
     cmd_connect = attribute(access=AttrWriteType.WRITE)
 
@@ -214,6 +232,10 @@ class PIStageTango(Device, metaclass=DeviceMeta):
 
     def write_move_step_size_um(self, step_um):
         self.move_step_size = step_um / 1000.0
+
+    @attribute(dtype=str)
+    def server_message(self):
+        return sys.stdout.read()
 
 
 if __name__ == "__main__":
