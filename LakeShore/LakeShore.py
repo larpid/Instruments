@@ -1,12 +1,16 @@
+"""
+device controll class for the LakeShore Temperature Monitor Model 218
+so far only used on device with serial: 21EB3L
+"""
+
 import serial
 from serial.tools import list_ports
 import time
 
-SERIAL_NUMBER = '21EB3L'
-
 
 class LakeShore:
-    def __init__(self):
+    def __init__(self, serial_number='21EB3L'):
+        self.serial_number = serial_number
         self.ser = None
 
     def connect(self):
@@ -30,17 +34,17 @@ class LakeShore:
             self.ser.write('*IDN?\n'.encode())
             idn_line = self.ser.readline().decode().split(',')
             if len(idn_line) >= 3:
-                if idn_line[2] == SERIAL_NUMBER:
+                if idn_line[2] == self.serial_number:
 
                     device_found = True
-                    print('connection established to LakeShore device with S/N: ' + SERIAL_NUMBER)
+                    print('connection established to LakeShore device with S/N: ' + self.serial_number)
                     break
 
             self.ser.close()
 
         if not device_found:
             self.ser = None
-            print('LakeShore device with S/N: %s not found :/' % SERIAL_NUMBER)
+            print('LakeShore device with S/N: %s not found :/' % self.serial_number)
             return
 
     def disconnect(self):
@@ -70,23 +74,37 @@ class LakeShore:
         self.ser.write('LOG 0\r\n'.encode())
 
     def log_read(self, sensors=None):
-        if sensors is None:
+        if sensors is None:  # avoiding list as default value (mutable)
             sensors = [1, 2]
 
         empty_records_reached = False
+        # todo: handle readout stop when log full
         record_number = 0
+        data = {'date,time': []}
 
         while not empty_records_reached:
-            record = []
+
+            date_time = ''
+
             for sensor_id in sensors:
                 self.ser.write(('LOGVIEW? %d %d\r\n' % (record_number, sensor_id)).encode())
-                record.append(self.ser.readline().decode().split(','))
+                record = self.ser.readline().decode().split(',')
 
+                if record[0] == '00/00/00':  # date is zero on unused records
+                    empty_records_reached = True
+                    print('finished reading log...')
+                    break
+                if int(record[3]) != 0:
+                    print('WARNING: error code %s returned on sensor %s' % (record[3], sensor_id))
+                if int(record[4]) != 1:
+                    print('WARNING: temperature unit of sensor %s is not Kelvin!' % sensor_id)
 
-        self.ser.write(('LOGVIEW? %d 2\r\n' % i).encode())
-        sens2 = ser.readlines()[0].decode().split(',')
+                date_time = record[0] + ',' + record[1]
+                data['sensor%d' % sensor_id].append(record[2])
+            data['date,time'].append(date_time)
+            record_number += 1
 
-        pass
+        return data
 
     def log_status(self):
         self.ser.write('LOG?\r\n'.encode())
