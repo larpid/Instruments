@@ -10,22 +10,7 @@ from PyTango import DevState, DebugIt, CmdArgType
 from PyTango.server import run
 from PyTango.server import Device, DeviceMeta
 from PyTango.server import attribute, command, pipe
-
-
-class StoreStdOut(object):
-    """Helper Class to store last stdout message"""
-
-    def __init__(self):
-        self.terminal = sys.stdout
-        self.last_message = ''
-
-    def write(self, message):
-        self.terminal.write(message)
-        if message != '\n':
-            self.last_message = message
-
-    def read(self):
-        return self.last_message
+from TangoHelper import StoreStdOut
 
 
 class PIStageTango(Device, metaclass=DeviceMeta):

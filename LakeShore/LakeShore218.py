@@ -9,7 +9,7 @@ from serial.tools import list_ports
 import time
 
 
-class LakeShore:
+class LakeShore218:
     def __init__(self, serial_number='21EB3L'):
         self.serial_number = serial_number
         self.ser = None
@@ -81,11 +81,11 @@ class LakeShore:
         self.ser.write(('LOGSET 1 %d %d %d %d\r\n' %
                         (overwrite_at_full_memory, continue_last_log, interval, number_of_readings)).encode())
 
-        time.sleep(1)
-        self.ser.write('LOG 1\r\n'.encode())
+        #time.sleep(1)
+        self.ser.write('LOG 1\n'.encode())
 
     def log_stop(self):
-        self.ser.write('LOG 0\r\n'.encode())
+        self.ser.write('LOG 0\n'.encode())
         print([self.ser.readline()])
 
     def log_read(self, sensors=None):
@@ -119,8 +119,9 @@ class LakeShore:
 
                 date_time = record[0] + ',' + record[1]
                 data['sensor%d' % sensor_id].append(record[2])
-            data['date,time'].append(date_time)
-            record_number += 1
+            else:
+                data['date,time'].append(date_time)
+                record_number += 1
 
         return data
 
