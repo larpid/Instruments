@@ -3,6 +3,7 @@ device controll class for the LakeShore Temperature Monitor Model 218
 so far only used on device with serial: 21EB3L
 """
 
+import fcntl
 import serial
 from serial.tools import list_ports
 import time
@@ -31,15 +32,28 @@ class LakeShore:
                                      stopbits=1)
             print('test connection established to device: ' + comport.device)
 
-            self.ser.write('*IDN?\n'.encode())
-            idn_line = self.ser.readline().decode().split(',')
-            if len(idn_line) >= 3:
-                if idn_line[2] == self.serial_number:
+            try:
+                # lock port to prevent access from multiple scripts
+                fcntl.flock(self.ser.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                print('device blocked')
+                self.ser.close()
+                continue
 
-                    device_found = True
-                    print('connection established to LakeShore device with S/N: ' + self.serial_number)
-                    break
+            try:
+                self.ser.write('*IDN?\n'.encode())
+                idn_line = self.ser.readline().decode().split(',')
+                if len(idn_line) >= 3:
+                    if idn_line[2] == self.serial_number:
 
+                        device_found = True
+                        print('connection established to LakeShore device %s with S/N: %s' %
+                              (comport.device, self.serial_number))
+                        break
+            except serial.serialutil.SerialException as error_message:
+                print(error_message)
+
+            fcntl.flock(self.ser.fileno(), fcntl.LOCK_UN)
             self.ser.close()
 
         if not device_found:
@@ -54,7 +68,7 @@ class LakeShore:
 
     def read_temp(self, sensor):
         """read temperature of specified sensor (can be 1-8)"""
-        self.ser.write(('SRGD? %d\r\n' % sensor).encode())
+        self.ser.write(('SRDG? %s\r\n' % sensor).encode())
         return self.ser.readline().decode()
 
     def log_start(self, continue_last_log=False, interval=20, overwrite_at_full_memory=True, number_of_readings=2):
@@ -67,27 +81,31 @@ class LakeShore:
         self.ser.write(('LOGSET 1 %d %d %d %d\r\n' %
                         (overwrite_at_full_memory, continue_last_log, interval, number_of_readings)).encode())
 
-        time.sleep(.3)
+        time.sleep(1)
         self.ser.write('LOG 1\r\n'.encode())
 
     def log_stop(self):
         self.ser.write('LOG 0\r\n'.encode())
+        print([self.ser.readline()])
 
     def log_read(self, sensors=None):
         if sensors is None:  # avoiding list as default value (mutable)
             sensors = [1, 2]
 
-        empty_records_reached = False
         # todo: handle readout stop when log full
-        record_number = 0
-        data = {'date,time': []}
 
+        data = {'date,time': []}
+        for sensor_id in sensors:
+            data['sensor%d' % sensor_id] = []
+
+        record_number = 0
+        empty_records_reached = False
         while not empty_records_reached:
 
             date_time = ''
 
             for sensor_id in sensors:
-                self.ser.write(('LOGVIEW? %d %d\r\n' % (record_number, sensor_id)).encode())
+                self.ser.write(('LOGVIEW? %d %d\r\n' % (record_number, int(sensor_id))).encode())
                 record = self.ser.readline().decode().split(',')
 
                 if record[0] == '00/00/00':  # date is zero on unused records
