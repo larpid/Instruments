@@ -42,7 +42,7 @@ class LakeShore218:
 
             try:
                 self.ser.write('*IDN?\n'.encode())
-                idn_line = self.ser.readline().decode().split(',')
+                idn_line = self.ser.readline().decode().strip().split(',')
                 if len(idn_line) >= 3:
                     if idn_line[2] == self.serial_number:
 
@@ -68,8 +68,8 @@ class LakeShore218:
 
     def read_temp(self, sensor):
         """read temperature of specified sensor (can be 1-8)"""
-        self.ser.write(('SRDG? %s\r\n' % sensor).encode())
-        return self.ser.readline().decode()
+        self.ser.write(('SRDG? %s\n' % sensor).encode())
+        return self.ser.readline().decode().strip()
 
     def log_start(self, continue_last_log=False, interval=20, overwrite_at_full_memory=True, number_of_readings=2):
         """start internal temperature logging
@@ -78,40 +78,36 @@ class LakeShore218:
         StorageCapability per Readings: (1500/1, 1000/2, 750/3, 600/4 ...) more details in the Manual
         """
 
-        self.ser.write(('LOGSET 1 %d %d %d %d\r\n' %
+        self.ser.write(('LOGSET 1 %d %d %d %d\n' %
                         (overwrite_at_full_memory, continue_last_log, interval, number_of_readings)).encode())
+        self.ser.readline()  # wait for LOGSET command to finish
 
-        #time.sleep(1)
         self.ser.write('LOG 1\n'.encode())
+        self.ser.readline()  # wait for LOG command to finish
 
     def log_stop(self):
         self.ser.write('LOG 0\n'.encode())
-        print([self.ser.readline()])
+        self.ser.readline()  # wait for LOG command to finish
 
     def log_read(self, sensors=None):
         if sensors is None:  # avoiding list as default value (mutable)
             sensors = [1, 2]
 
-        # todo: handle readout stop when log full
+        self.ser.write('LOGNUM ?\n'.encode())
+        last_record_number = int(self.ser.readline().decode().strip())
 
         data = {'date,time': []}
         for sensor_id in sensors:
             data['sensor%d' % sensor_id] = []
 
-        record_number = 0
-        empty_records_reached = False
-        while not empty_records_reached:
+        for record_number in range(last_record_number + 1):
 
             date_time = ''
 
             for sensor_id in sensors:
-                self.ser.write(('LOGVIEW? %d %d\r\n' % (record_number, int(sensor_id))).encode())
+                self.ser.write(('LOGVIEW? %d %d\n' % (record_number, int(sensor_id))).encode())
                 record = self.ser.readline().decode().split(',')
 
-                if record[0] == '00/00/00':  # date is zero on unused records
-                    empty_records_reached = True
-                    print('finished reading log...')
-                    break
                 if int(record[3]) != 0:
                     print('WARNING: error code %s returned on sensor %s' % (record[3], sensor_id))
                 if int(record[4]) != 1:
@@ -121,10 +117,9 @@ class LakeShore218:
                 data['sensor%d' % sensor_id].append(record[2])
             else:
                 data['date,time'].append(date_time)
-                record_number += 1
 
         return data
 
     def log_status(self):
-        self.ser.write('LOG?\r\n'.encode())
-        return self.ser.readline().decode()
+        self.ser.write('LOG?\n'.encode())
+        return self.ser.readline().decode().strip()
