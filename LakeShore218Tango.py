@@ -27,6 +27,11 @@ class LakeShore218Tango(Device, metaclass=DeviceMeta):
         self.debug_stream("In " + self.get_name() + ".__init__()")
         LakeShore218Tango.init_device(self)
         self.lake_shore = LakeShore218()
+        self.random_variable = 26.8
+        self.new_attr = attribute()  # this seems to not work... :/
+        def dummy_func():
+            return 42
+        self.read_new_attr = dummy_func
 
     def init_device(self):
         Device.init_device(self)
