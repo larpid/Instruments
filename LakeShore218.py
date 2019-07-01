@@ -3,67 +3,30 @@ device controll class for the LakeShore Temperature Monitor Model 218
 so far only used on device with serial: 21EB3L
 """
 
-import fcntl
 import serial
-from serial.tools import list_ports
-import time
+import TangoHelper
 
 
 class LakeShore218:
     def __init__(self, serial_number='21EB3L'):
         self.serial_number = serial_number
-        self.ser = None
+        self.ser = serial.Serial()
 
     def connect(self):
-        if self.ser is not None:
+        if self.ser.is_open:
             print('device already connected')
             return
 
-        # # connection handling
-        device_found = False
+        self.ser = serial.Serial(baudrate=9600,
+                                 timeout=1,
+                                 bytesize=7,
+                                 parity='O',
+                                 stopbits=1)
 
-        # try connections to find right serial number
-        for comport in list_ports.comports():
-            self.ser = serial.Serial(port=comport.device,
-                                     baudrate=9600,
-                                     timeout=1,
-                                     bytesize=7,
-                                     parity='O',
-                                     stopbits=1)
-            print('test connection established to device: ' + comport.device)
-
-            try:
-                # lock port to prevent access from multiple scripts
-                fcntl.flock(self.ser.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError:
-                print('device blocked')
-                self.ser.close()
-                continue
-
-            try:
-                self.ser.write('*IDN?\n'.encode())
-                idn_line = self.ser.readline().decode().strip().split(',')
-                if len(idn_line) >= 3:
-                    if idn_line[2] == self.serial_number:
-
-                        device_found = True
-                        print('connection established to LakeShore device %s with S/N: %s' %
-                              (comport.device, self.serial_number))
-                        break
-            except serial.serialutil.SerialException as error_message:
-                print(error_message)
-
-            fcntl.flock(self.ser.fileno(), fcntl.LOCK_UN)
-            self.ser.close()
-
-        if not device_found:
-            self.ser = None
-            print('LakeShore device with S/N: %s not found :/' % self.serial_number)
-            return
+        TangoHelper.connect_by_serial_number(self.ser, self.serial_number)
 
     def disconnect(self):
         self.ser.close()
-        self.ser = None
         print('connection closed')
 
     def read_temp(self, sensor):

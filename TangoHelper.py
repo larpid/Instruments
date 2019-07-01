@@ -23,12 +23,12 @@ class StoreStdOut(object):
     def read(self):
         return self.last_message
 
-def portfinder(serial_connection, serial_number):
-    """takes a serial.Serial() object as serial_connection and a serial number (S/N) of the device
-    aquireable by *IDN? call to find the right port"""
 
-    # # connection handling
-    device_found = False
+def connect_by_serial_number(serial_connection, serial_number):
+    """handle connection by serial number instead of a fixed port
+
+    takes a serial.Serial() object as serial_connection and a serial number (S/N) of the device
+    acquirable by *IDN? call to find the right port"""
 
     # try connections to find right serial number
     for comport in list_ports.comports():
@@ -49,7 +49,6 @@ def portfinder(serial_connection, serial_number):
             idn_line = serial_connection.readline().decode().split(',')
             if len(idn_line) >= 3:
                 if idn_line[2] == serial_number:
-                    device_found = True
                     print('connection established to device %s with S/N: %s' %
                           (comport.device, serial_number))
                     break
@@ -59,7 +58,5 @@ def portfinder(serial_connection, serial_number):
         fcntl.flock(serial_connection.fileno(), fcntl.LOCK_UN)
         serial_connection.close()
 
-    if not device_found:
-        serial_connection = None
+    else:
         print('Device with S/N: %s not found :/' % serial_number)
-        return
