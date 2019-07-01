@@ -14,7 +14,10 @@ from TangoHelper import StoreStdOut
 
 
 def command2(command_function):
-    command(command_function())
+    command_function = command(command_function)
+    attribute_name = 'cmd_%s' % command_function.__name__
+    print(attribute_name)
+    return command_function, attribute(), command_function
 
 
 class LakeShore218Tango(Device, metaclass=DeviceMeta):
@@ -39,12 +42,11 @@ class LakeShore218Tango(Device, metaclass=DeviceMeta):
         else:
             self.set_state(DevState.FAULT)
 
-    @command2
     def disconnect(self):
         self.lake_shore.disconnect()
         self.set_state(DevState.OFF)
 
-
+    disconnect, attr1, read_attr1 = command2(disconnect)
 
 #temp1
 #temp2
