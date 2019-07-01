@@ -10,7 +10,7 @@ from PyTango import DevState, DebugIt, CmdArgType
 from PyTango.server import run
 from PyTango.server import Device, DeviceMeta
 from PyTango.server import attribute, command, pipe
-from TangoHelper import StoreStdOut
+import TangoHelper
 
 
 class PIStageTango(Device, metaclass=DeviceMeta):
@@ -23,7 +23,7 @@ class PIStageTango(Device, metaclass=DeviceMeta):
         Device.init_device(self)
         self.set_state(DevState.OFF)
         # redirect stdout to store last line
-        sys.stdout = StoreStdOut()
+        sys.stdout = TangoHelper.StoreStdOut()
 
     cmd_connect = attribute(access=AttrWriteType.WRITE)
 
