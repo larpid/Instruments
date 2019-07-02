@@ -31,8 +31,8 @@ class LakeShore218:
 
     def read_temp(self, sensor):
         """read temperature of specified sensor (can be 1-8)"""
-        self.ser.write(('SRDG? %s\n' % sensor).encode())
-        return self.ser.readline().decode().strip()
+        self.ser.write(('KRDG? %s\n' % sensor).encode())
+        return self.ser.readline().decode().strip().strip('+')
 
     def log_start(self, continue_last_log=False, interval=20, overwrite_at_full_memory=True, number_of_readings=2):
         """start internal temperature logging
@@ -63,7 +63,7 @@ class LakeShore218:
         for sensor_id in sensors:
             data['sensor%d' % sensor_id] = []
 
-        for record_number in range(last_record_number + 1):
+        for record_number in range(1, last_record_number + 1):
 
             date_time = ''
 
@@ -77,7 +77,7 @@ class LakeShore218:
                     print('WARNING: temperature unit of sensor %s is not Kelvin!' % sensor_id)
 
                 date_time = record[0] + ',' + record[1]
-                data['sensor%d' % sensor_id].append(record[2])
+                data['sensor%d' % sensor_id].append(record[2].strip('+'))
             else:
                 data['date,time'].append(date_time)
 
