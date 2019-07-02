@@ -29,6 +29,14 @@ class LakeShore218Tango(Device, metaclass=DeviceMeta):
         self.lake_shore = LakeShore218()
         self.random_variable = 26.8
         self.new_attr = attribute()  # this seems to not work... :/
+        #print(dir(self))
+        for attr in dir(self):
+            #if getattr(self, attr)
+            print(attr, type(getattr(self, attr)))
+        #print(self.__dir__())
+        print('....')
+        #print(list(map(type, dir(self))))
+
         def dummy_func():
             return 42
         self.read_new_attr = dummy_func
@@ -52,6 +60,8 @@ class LakeShore218Tango(Device, metaclass=DeviceMeta):
         self.set_state(DevState.OFF)
 
     disconnect, attr1, read_attr1 = command2(disconnect)
+
+    testcomm = command()
 
 #temp1
 #temp2
