@@ -1,6 +1,6 @@
 """
 device controll class for the Elektro-Automatik PS2342-10B Power Supply
-so far only used on device with serial:
+so far only used on device with serial: 2845070119
 """
 
 import serial
@@ -8,7 +8,7 @@ import TangoHelper
 
 
 class EAPS:
-    def __init__(self, serial_number=''):
+    def __init__(self, serial_number='2845070119'):
         self.serial_number = serial_number
         self.ser = serial.Serial()
 
