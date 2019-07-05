@@ -6,38 +6,39 @@ so far only used on device with serial: 21EB3L
 from LakeShore218 import LakeShore218
 import sys
 from tango import AttrWriteType, DispLevel
-from PyTango import DevState, DebugIt, CmdArgType
+import PyTango
+from PyTango import DevState, DebugIt, CmdArgType, Attr, Util
 from PyTango.server import run
 from PyTango.server import Device, DeviceMeta
 from PyTango.server import attribute, command, pipe
 from TangoHelper import StoreStdOut
 
 
-def command2(command_function):
-    command_function = command(command_function)
-    attribute_name = 'cmd_%s' % command_function.__name__
-    print(attribute_name)
-    return command_function, attribute(), command_function
+
 
 
 class LakeShore218Tango(Device, metaclass=DeviceMeta):
 
+    def command2(self, *decorator_args, **decorator_kwargs):
+        def inside_command2(command_function):
+            command_function = command(command_function, *decorator_args, **decorator_kwargs)
+            attribute_name = 'cmd_%s' % command_function.__name__
+            attr = Attr(attribute_name, PyTango.DevDouble)
+            self.add_attribute(attr, r_meth=None, w_meth=command_function)
+
+        return inside_command2
+
     def __init__(self, cl, name):
         Device.__init__(self, cl, name)
         self.debug_stream("In " + self.get_name() + ".__init__()")
+        self.lake_shore = None  # init in init_device
         LakeShore218Tango.init_device(self)
-        self.lake_shore = LakeShore218()
-        self.random_variable = 26.8
-        self.new_attr = attribute()  # this seems to not work... :/
-        #print(dir(self))
-        #for attr in dir(self):
-            #if getattr(self, attr)
-        #    print(attr, type(getattr(self, attr)))
-        #print(self.__dir__())
-        print('....')
-        #print(list(map(type, dir(self))))
-        print(type(self.testattr_22))
-        #self.add_attribute(self.testattr_22)
+
+
+
+        def r_testattr_22(attr):
+            return 22
+        # redirect stdout to store last line
 
         def dummy_func():
             return 42
@@ -45,11 +46,13 @@ class LakeShore218Tango(Device, metaclass=DeviceMeta):
 
     def init_device(self):
         Device.init_device(self)
-        self.set_state(DevState.OFF)
-        # redirect stdout to store last line
         sys.stdout = StoreStdOut()
+        self.lake_shore = LakeShore218(sys.argv[1])
+        self.set_state(DevState.OFF)
 
-    @command2
+
+
+    @command2(dtype_in=float)
     def connect(self):
         self.set_state(DevState.INIT)
         if self.lake_shore.connect():
@@ -61,12 +64,10 @@ class LakeShore218Tango(Device, metaclass=DeviceMeta):
         self.lake_shore.disconnect()
         self.set_state(DevState.OFF)
 
-    disconnect, attr1, read_attr1 = command2(disconnect)
+    disconnect = command2(disconnect)
 
-    testattr_22 = attribute()
-
-    def read_testattr_22(self):
-        return 22
+    def r_testattr_22(self, attr):
+        attr.set_value(22.0)
 
     testcomm = command()
 
