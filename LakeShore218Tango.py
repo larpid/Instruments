@@ -14,35 +14,18 @@ from PyTango.server import attribute, command, pipe
 from TangoHelper import StoreStdOut
 
 
-
-
-
 class LakeShore218Tango(Device, metaclass=DeviceMeta):
-
-    def command2(self, *decorator_args, **decorator_kwargs):
-        def inside_command2(command_function):
-            command_function = command(command_function, *decorator_args, **decorator_kwargs)
-            attribute_name = 'cmd_%s' % command_function.__name__
-            attr = Attr(attribute_name, PyTango.DevDouble)
-            self.add_attribute(attr, r_meth=None, w_meth=command_function)
-
-        return inside_command2
 
     def __init__(self, cl, name):
         Device.__init__(self, cl, name)
         self.debug_stream("In " + self.get_name() + ".__init__()")
         self.lake_shore = None  # init in init_device
+        # default log options can be changed via attribute
+        self.log_options = {'continue_last_log': False,
+                            'interval': 20,  # time steps in s
+                            'overwrite_at_full_memory': True,
+                            'number_of_readings': 2}  # number of logged channels (/logged sensors)
         LakeShore218Tango.init_device(self)
-
-
-
-        def r_testattr_22(attr):
-            return 22
-        # redirect stdout to store last line
-
-        def dummy_func():
-            return 42
-        self.read_new_attr = dummy_func
 
     def init_device(self):
         Device.init_device(self)
@@ -50,9 +33,7 @@ class LakeShore218Tango(Device, metaclass=DeviceMeta):
         self.lake_shore = LakeShore218(sys.argv[1])
         self.set_state(DevState.OFF)
 
-
-
-    @command2(dtype_in=float)
+    @command
     def connect(self):
         self.set_state(DevState.INIT)
         if self.lake_shore.connect():
@@ -60,25 +41,81 @@ class LakeShore218Tango(Device, metaclass=DeviceMeta):
         else:
             self.set_state(DevState.FAULT)
 
+    cmd_connect = attribute(access=AttrWriteType.WRITE)
+
+    def write_cmd_connect(self, _):
+        self.connect()
+
     def disconnect(self):
         self.lake_shore.disconnect()
         self.set_state(DevState.OFF)
 
-    disconnect = command2(disconnect)
+    cmd_disconnect = attribute(access=AttrWriteType.WRITE)
 
-    def r_testattr_22(self, attr):
-        attr.set_value(22.0)
+    def write_cmd_disconnect(self, _):
+        self.disconnect()
 
-    testcomm = command()
+    @attribute(access=AttrWriteType.READ,
+               dtype_in=str,
+               dtype_out=float)
+    def read_temp(self, sensor_id):
+        return self.lake_shore.read_temp(sensor_id)
 
-#temp1
-#temp2
-#logstart
-#logstop
-#logcontinue
-#logread
-#logstatus
+    log_continue_last = attribute(AttrWriteType.READ_WRITE)
 
+    def read_log_continue_last(self):
+        return self.log_options['continue_last_log']
+
+    def write_log_continue_last(self, continue_last_log):
+        self.log_options['continue_last_log'] = continue_last_log
+
+    log_interval = attribute(AttrWriteType.READ_WRITE)
+
+    def read_log_interval(self):
+        return self.log_options['interval']
+
+    def write_log_interval(self, interval):
+        self.log_options['interval'] = interval
+
+    log_overwrite_at_full_memory = attribute(AttrWriteType.READ_WRITE)
+
+    def read_log_overwrite_at_full_memory(self):
+        return self.log_options['overwrite_at_full_memory']
+
+    def write_log_overwrite_at_full_memory(self, overwrite_at_full_memory):
+        self.log_options['overwrite_at_full_memory'] = overwrite_at_full_memory
+
+    log_number_of_readings = attribute(AttrWriteType.READ_WRITE)
+
+    def read_log_number_of_readings(self):
+        return self.log_options['number_of_readings']
+
+    def write_log_number_of_readings(self, number_of_readings):
+        self.log_options['number_of_readings'] = number_of_readings
+
+    @command
+    def log_start(self):
+        #self.lake_shore.log_start(continue_last_log=self.log_options['continue_last_log'],
+        #                          interval=self.log_options['interval'],
+        #                          overwrite_at_full_memory=self.log_options['overwrite_at_full_memory'],
+        #                          number_of_readings=self.log_options['number_of_readings']
+        # todo: if this line works remove the 4 lines before
+        self.lake_shore.log_start(**self.log_options)
+
+    @command
+    def log_stop(self):
+        self.lake_shore.log_stop()
+
+    log_read = attribute(AttrWriteType.READ)
+
+    def read_log_read(self):
+        """reading the log currently hardcoded to use channel 1 and 2"""
+        return self.lake_shore.log_read([1, 2])
+
+    log_status = attribute(AttrWriteType.READ)
+
+    def read_log_status(self):
+        return self.lake_shore.log_status()
 
     @attribute(dtype=str)
     def server_message(self):

@@ -32,7 +32,7 @@ class LakeShore218:
     def read_temp(self, sensor):
         """read temperature of specified sensor (can be 1-8)"""
         self.ser.write(('KRDG? %s\n' % sensor).encode())
-        return self.ser.readline().decode().strip().strip('+')
+        return float(self.ser.readline().decode().strip())
 
     def log_start(self, continue_last_log=False, interval=20, overwrite_at_full_memory=True, number_of_readings=2):
         """start internal temperature logging
