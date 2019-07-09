@@ -46,6 +46,7 @@ class LakeShore218Tango(Device, metaclass=DeviceMeta):
     def write_cmd_connect(self, _):
         self.connect()
 
+    @command
     def disconnect(self):
         self.lake_shore.disconnect()
         self.set_state(DevState.OFF)
@@ -55,13 +56,12 @@ class LakeShore218Tango(Device, metaclass=DeviceMeta):
     def write_cmd_disconnect(self, _):
         self.disconnect()
 
-    @attribute(access=AttrWriteType.READ,
-               dtype_in=str,
-               dtype_out=float)
+    @attribute(access=AttrWriteType.READ)
     def read_temp(self, sensor_id):
         return self.lake_shore.read_temp(sensor_id)
 
-    log_continue_last = attribute(AttrWriteType.READ_WRITE)
+    log_continue_last = attribute(access=AttrWriteType.READ_WRITE,
+                                  dtype=bool)
 
     def read_log_continue_last(self):
         return self.log_options['continue_last_log']
@@ -69,7 +69,8 @@ class LakeShore218Tango(Device, metaclass=DeviceMeta):
     def write_log_continue_last(self, continue_last_log):
         self.log_options['continue_last_log'] = continue_last_log
 
-    log_interval = attribute(AttrWriteType.READ_WRITE)
+    log_interval = attribute(access=AttrWriteType.READ_WRITE,
+                             unit='s')
 
     def read_log_interval(self):
         return self.log_options['interval']
@@ -77,7 +78,8 @@ class LakeShore218Tango(Device, metaclass=DeviceMeta):
     def write_log_interval(self, interval):
         self.log_options['interval'] = interval
 
-    log_overwrite_at_full_memory = attribute(AttrWriteType.READ_WRITE)
+    log_overwrite_at_full_memory = attribute(access=AttrWriteType.READ_WRITE,
+                                             dtype=bool)
 
     def read_log_overwrite_at_full_memory(self):
         return self.log_options['overwrite_at_full_memory']
@@ -85,7 +87,7 @@ class LakeShore218Tango(Device, metaclass=DeviceMeta):
     def write_log_overwrite_at_full_memory(self, overwrite_at_full_memory):
         self.log_options['overwrite_at_full_memory'] = overwrite_at_full_memory
 
-    log_number_of_readings = attribute(AttrWriteType.READ_WRITE)
+    log_number_of_readings = attribute(access=AttrWriteType.READ_WRITE)
 
     def read_log_number_of_readings(self):
         return self.log_options['number_of_readings']
