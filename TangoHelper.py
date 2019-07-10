@@ -10,6 +10,7 @@ import fcntl
 
 class StoreStdOut(object):
     """Helper Class to store last stdout message"""
+    # todo: try to change to only overwrite stuff so sys.stdout.flush() keeps being usable
 
     def __init__(self):
         self.terminal = sys.stdout
@@ -20,12 +21,13 @@ class StoreStdOut(object):
         if message != '\n':
             self.last_message = message
 
-    def read(self):
+    def read_stored_message(self):
         return self.last_message
 
 
 def connect_by_serial_number(serial_connection, serial_number):
     """handle connection by serial number instead of a fixed port
+    returns: bool(connection successful?)
 
     takes a serial.Serial() object as serial_connection and a serial number (S/N) of the device
     acquirable by *IDN? call to find the right port"""
@@ -51,7 +53,8 @@ def connect_by_serial_number(serial_connection, serial_number):
                 if idn_line[2] == serial_number:
                     print('connection established to device %s with S/N: %s' %
                           (comport.device, serial_number))
-                    break
+                    return True
+
         except serial.serialutil.SerialException as error_message:
             print(error_message)
 
@@ -60,3 +63,4 @@ def connect_by_serial_number(serial_connection, serial_number):
 
     else:
         print('Device with S/N: %s not found :/' % serial_number)
+        return False
