@@ -84,7 +84,7 @@ class LakeShore218Tango(Device, metaclass=DeviceMeta):
 
     @attribute(dtype=str)
     def server_message(self):
-        return sys.stdout.read()
+        return sys.stdout.read_stored_message()
 
 
 if __name__ == "__main__":

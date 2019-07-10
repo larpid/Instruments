@@ -5,7 +5,7 @@ test = LakeShore218.LakeShore218()
 test.connect()
 
 print(test.log_status())
-for i in range(9):
+for i in range(1, 9):
     print(test.read_temp(i))
 print('_')
 test.log_start(continue_last_log=False, interval=1)

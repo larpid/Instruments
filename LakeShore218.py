@@ -15,7 +15,7 @@ class LakeShore218:
     def connect(self):
         if self.ser.is_open:
             print('device already connected')
-            return
+            return True
 
         self.ser = serial.Serial(baudrate=9600,
                                  timeout=1,
@@ -23,7 +23,7 @@ class LakeShore218:
                                  parity='O',
                                  stopbits=1)
 
-        TangoHelper.connect_by_serial_number(self.ser, self.serial_number)
+        return TangoHelper.connect_by_serial_number(self.ser, self.serial_number)
 
     def disconnect(self):
         self.ser.close()
@@ -77,7 +77,7 @@ class LakeShore218:
                     print('WARNING: temperature unit of sensor %s is not Kelvin!' % sensor_id)
 
                 date_time = record[0] + ',' + record[1]
-                data['sensor%d' % sensor_id].append(record[2].strip('+'))
+                data['sensor%d' % sensor_id].append(float(record[2].strip('+')))
             else:
                 data['date,time'].append(date_time)
 
@@ -85,4 +85,4 @@ class LakeShore218:
 
     def log_status(self):
         self.ser.write('LOG?\n'.encode())
-        return self.ser.readline().decode().strip()
+        return bool(self.ser.readline().decode().strip())

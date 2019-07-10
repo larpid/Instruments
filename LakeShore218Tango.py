@@ -16,22 +16,32 @@ from TangoHelper import StoreStdOut
 
 class LakeShore218Tango(Device, metaclass=DeviceMeta):
 
-    def __init__(self, cl, name):
-        Device.__init__(self, cl, name)
-        self.debug_stream("In " + self.get_name() + ".__init__()")
-        self.lake_shore = None  # init in init_device
-        # default log options can be changed via attribute
-        self.log_options = {'continue_last_log': False,
-                            'interval': 20,  # time steps in s
-                            'overwrite_at_full_memory': True,
-                            'number_of_readings': 2}  # number of logged channels (/logged sensors)
-        LakeShore218Tango.init_device(self)
-
     def init_device(self):
         Device.init_device(self)
         sys.stdout = StoreStdOut()
         self.lake_shore = LakeShore218(sys.argv[1])
+        # default log options can be changed via attributes
+        self.log_options = {'continue_last_log': False,
+                            'interval': 20,  # time steps in s
+                            'overwrite_at_full_memory': True,
+                            'number_of_readings': 2}  # number of logged channels (/logged sensors)
+        self.add_dynamic_attributes()
         self.set_state(DevState.OFF)
+        self.connect()  # try to auto connect on server start. can also be done manually
+
+    def add_dynamic_attributes(self):
+        #def read_temp(self, sensor_id):
+        #    return self.lake_shore.read_temp(sensor_id)
+
+        for sensor in range(1, 9):
+            b = self
+
+            def read_temp():
+                b.lake_shore.read_temp(sensor)
+            print(read_temp())
+            # todo: this still does not work
+            read_temp_attribute = PyTango.Attr('read_temp_sensor%s' % sensor, PyTango.DevDouble)
+            self.add_attribute(read_temp_attribute, r_meth=lambda _=0: self.lake_shore.read_temp(sensor))
 
     @command
     def connect(self):
@@ -55,10 +65,6 @@ class LakeShore218Tango(Device, metaclass=DeviceMeta):
 
     def write_cmd_disconnect(self, _):
         self.disconnect()
-
-    @attribute(access=AttrWriteType.READ)
-    def read_temp(self, sensor_id):
-        return self.lake_shore.read_temp(sensor_id)
 
     log_continue_last = attribute(access=AttrWriteType.READ_WRITE,
                                   dtype=bool)
@@ -97,31 +103,50 @@ class LakeShore218Tango(Device, metaclass=DeviceMeta):
 
     @command
     def log_start(self):
-        #self.lake_shore.log_start(continue_last_log=self.log_options['continue_last_log'],
-        #                          interval=self.log_options['interval'],
-        #                          overwrite_at_full_memory=self.log_options['overwrite_at_full_memory'],
-        #                          number_of_readings=self.log_options['number_of_readings']
-        # todo: if this line works remove the 4 lines before
         self.lake_shore.log_start(**self.log_options)
+
+    cmd_log_start = attribute(access=AttrWriteType.WRITE)
+
+    def write_cmd_log_start(self, _):
+        self.log_start()
 
     @command
     def log_stop(self):
         self.lake_shore.log_stop()
 
-    log_read = attribute(AttrWriteType.READ)
+    cmd_log_stop = attribute(access=AttrWriteType.WRITE)
+
+    def write_cmd_log_stop(self, _):
+        self.log_stop()
+
+    log_read = attribute(access=AttrWriteType.READ)
 
     def read_log_read(self):
-        """reading the log currently hardcoded to use channel 1 and 2"""
-        return self.lake_shore.log_read([1, 2])
+        """read the log
+        used sensors are a range created from the number_of_readings setting in log_options
+        returns: concatenated list of all the log readings to be tango-attribute-returnable
+        (i.e.: [sensor1_temp1, sensor1_temp2, ... , sensor2_temp1, sensor2_temp2, ...])"""
 
-    log_status = attribute(AttrWriteType.READ)
+        sensor_list = list(range(1, self.log_options['number_of_readings'] + 1))
+        dict_of_sensor_temp_lists = self.lake_shore.log_read(sensor_list)
+        concatenated_temp_list = []
 
-    def read_log_status(self):
+        for sensor in sensor_list:
+            concatenated_temp_list += dict_of_sensor_temp_lists['sensor%s' % sensor]
+
+        print(dict_of_sensor_temp_lists)
+        print(list(map(type, concatenated_temp_list)))
+        print(concatenated_temp_list)  # todo: these outputs seem to be correct...
+
+        return concatenated_temp_list  # todo: output still somehow not understood by tango
+
+    @attribute
+    def log_status(self):
         return self.lake_shore.log_status()
 
     @attribute(dtype=str)
     def server_message(self):
-        return sys.stdout.read()
+        return sys.stdout.read_stored_message()
 
 
 if __name__ == "__main__":
