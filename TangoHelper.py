@@ -13,16 +13,20 @@ class StoreStdOut(object):
     # todo: try to change to only overwrite stuff so sys.stdout.flush() keeps being usable
 
     def __init__(self):
-        self.terminal = sys.stdout
+        self.stdout_orig = sys.stdout
         self.last_message = ''
 
     def write(self, message):
-        self.terminal.write(message)
+        self.stdout_orig.write(message)
         if message != '\n':
             self.last_message = message
 
     def read_stored_message(self):
         return self.last_message
+
+    # functions inherited from sys.stdout object (there might be a cleaner way to do this automatically)
+    def flush(self, *args, **kwargs):
+        self.stdout_orig.flush(*args, **kwargs)
 
 
 def connect_by_serial_number(serial_connection, serial_number):
