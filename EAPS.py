@@ -31,6 +31,25 @@ communication_object_data_types = {0: str,  # read only, device type
                                    255: int  # error object
                                    }
 
+communication_object_answer_lengths = {0: 5+16,  # read only, device type
+                                       1: 5+16,  # ro, S/N
+                                       2: 5+4,  # ro, nominal voltage
+                                       3: 5+4,  # ro, nominal current
+                                       4: 5+4,  # ro, nominal power
+                                       6: 5+16,  # ro, device article no.
+                                       8: 5+16,  # ro, manufacturer
+                                       9: 5+16,  # ro, software version
+                                       19: 5+2,  # ro, device class
+                                       38: 5+2,  # read write, OVP threshold (OVP is probably overvoltage)
+                                       39: 5+2,  # rw, OCP threshold (OCP is probably overcurrent)
+                                       50: 5+2,  # rw, set value voltage U (% of U nominal * 256)
+                                       51: 5+2,  # rw, set value current I (% of I nominal * 256)
+                                       54: 5+2,  # rw, control commands
+                                       71: 5+6,  # ro, request Status + actual values
+                                       72: 5+6,  # ro, request Status + set values
+                                       255: 5+1  # error object
+                                       }
+
 # error messages known by eaps device
 error_messages = {3: "Check sum incorrect",
                   4: "Start delimiter incorrect",
@@ -58,7 +77,8 @@ def decode_eaps_answer(answer):
     # check for correct checksum
     expected_checksum = sum(answer[:-2]) % 2 ** 16  # gives int checksum displayable in 2 bytes
     if checksum != expected_checksum:
-        raise ValueError('wrong checksum: %s received when %s expected' % (checksum, expected_checksum))
+        raise ValueError('wrong checksum: %s received when %s expected\ndevice answer is: %s' %
+                         (checksum, expected_checksum, answer))
 
     if len(data) != start_delimiter % 2 ** 4 + 1:
         raise SyntaxError('unexpected data length')
@@ -105,7 +125,7 @@ def encode_eaps_message(channel, message_is_request, message_object, message):
 
 
 class EAPS:
-    def __init__(self, serial_number='2845070119'):
+    def __init__(self, serial_number):
         self.serial_number = serial_number
         self.ser = serial.Serial()
         self.nominal_voltage = 0  # in V
@@ -130,19 +150,22 @@ class EAPS:
             else:
                 return False
 
-        TangoHelper.connect_by_serial_number(self.ser, self.serial_number, idn_message='\x70\x01\x01\x00\x72',
-                                             idn_answer_check_function=idn_answer_check_function)
+        if not TangoHelper.connect_by_serial_number(self.ser, self.serial_number, idn_message='\x70\x01\x01\x00\x72',
+                                                    idn_answer_check_function=idn_answer_check_function):
+            return False
 
         # read nominal values
         self.ser.write(encode_eaps_message(1, True, 2, ''))
-        _, _, self.nominal_voltage = decode_eaps_answer(self.ser.readline())
+        _, _, self.nominal_voltage = decode_eaps_answer(self.ser.read(communication_object_answer_lengths[2]))
         print('nominal voltage is %s' % self.nominal_voltage)
         self.ser.write(encode_eaps_message(1, True, 3, ''))
-        _, _, self.nominal_current = decode_eaps_answer(self.ser.readline())
+        _, _, self.nominal_current = decode_eaps_answer(self.ser.read(communication_object_answer_lengths[2]))
         print('nominal current is %s' % self.nominal_current)
         self.ser.write(encode_eaps_message(1, True, 4, ''))
-        _, _, self.nominal_power = decode_eaps_answer(self.ser.readline())
+        _, _, self.nominal_power = decode_eaps_answer(self.ser.read(communication_object_answer_lengths[2]))
         print('nominal power is %s' % self.nominal_power)
+
+        return True
 
     def disconnect(self):
         self.ser.close()
@@ -150,7 +173,7 @@ class EAPS:
 
     def switch_to_remote_control(self, channel):
         self.ser.write(encode_eaps_message(channel, False, 54, '\x10\x10'))
-        if decode_eaps_answer(self.ser.readline()) == (int(channel), 255, True):
+        if decode_eaps_answer(self.ser.read(communication_object_answer_lengths[255])) == (int(channel), 255, True):
             print('channel %s switched to remote controlled operation' % channel)
             return True
         else:
@@ -159,7 +182,7 @@ class EAPS:
 
     def switch_to_manual_control(self, channel):
         self.ser.write(encode_eaps_message(channel, False, 54, '\x10\x00'))
-        if decode_eaps_answer(self.ser.readline()) == (int(channel), 255, True):
+        if decode_eaps_answer(self.ser.read(communication_object_answer_lengths[255])) == (int(channel), 255, True):
             print('channel %s switched to manual controlled operation' % channel)
             return True
         else:
@@ -168,7 +191,7 @@ class EAPS:
 
     def switch_output_on(self, channel):
         self.ser.write(encode_eaps_message(channel, False, 54, '\x01\x01'))
-        if decode_eaps_answer(self.ser.readline()) == (int(channel), 255, True):
+        if decode_eaps_answer(self.ser.read(communication_object_answer_lengths[255])) == (int(channel), 255, True):
             print('channel %s switched power output on' % channel)
             return True
         else:
@@ -177,7 +200,7 @@ class EAPS:
 
     def switch_output_off(self, channel):
         self.ser.write(encode_eaps_message(channel, False, 54, '\x01\x00'))
-        if decode_eaps_answer(self.ser.readline()) == (int(channel), 255, True):
+        if decode_eaps_answer(self.ser.read(communication_object_answer_lengths[255])) == (int(channel), 255, True):
             print('channel %s switched power output off' % channel)
             return True
         else:
@@ -190,7 +213,7 @@ class EAPS:
         encoded_voltage = int(round(voltage/self.nominal_voltage*256*100))
         byte_encoded_voltage = bytes([encoded_voltage//256, encoded_voltage % 256])
         self.ser.write(encode_eaps_message(channel, False, 50, byte_encoded_voltage))
-        if decode_eaps_answer(self.ser.readline()) == (int(channel), 255, True):
+        if decode_eaps_answer(self.ser.read(communication_object_answer_lengths[255])) == (int(channel), 255, True):
             print('channel %s has new set voltage of %sV' % (channel, voltage))
             return True
         else:
@@ -203,7 +226,7 @@ class EAPS:
         encoded_current = int(round(current/self.nominal_current*256*100))
         byte_encoded_current = bytes([encoded_current//256, encoded_current % 256])
         self.ser.write(encode_eaps_message(channel, False, 51, byte_encoded_current))
-        if decode_eaps_answer(self.ser.readline()) == (int(channel), 255, True):
+        if decode_eaps_answer(self.ser.read(communication_object_answer_lengths[255])) == (int(channel), 255, True):
             print('channel %s has new set current of %sA' % (channel, current))
             return True
         else:
@@ -212,9 +235,8 @@ class EAPS:
 
     def read_status_plus_actual_values(self, channel):
         self.ser.write(encode_eaps_message(channel, True, 71, b''))
-        _, _, answer = decode_eaps_answer(self.ser.readline())
+        _, _, answer = decode_eaps_answer(self.ser.read(communication_object_answer_lengths[71]))
 
-        print(answer)
         status = {'remote_controlled': bool(answer[0][0] & 1),  # otherwise free access
                   'output_on': bool(answer[0][1] & 1),
                   'control_state': None,
@@ -222,7 +244,7 @@ class EAPS:
                   'OVP_active': bool(answer[0][1] & 16),
                   'OCP_active': bool(answer[0][1] & 32),
                   'OPP_active': bool(answer[0][1] & 64),
-                  'OTP_active': bool(answer[0][1] & 127)}
+                  'OTP_active': bool(answer[0][1] & 128)}
 
         if answer[0][1] & 6:
             status['control_state'] = 'CC'
@@ -236,9 +258,8 @@ class EAPS:
 
     def read_status_plus_set_values(self, channel):
         self.ser.write(encode_eaps_message(channel, True, 72, b''))
-        _, _, answer = decode_eaps_answer(self.ser.readline())
+        _, _, answer = decode_eaps_answer(self.ser.read(communication_object_answer_lengths[72]))
 
-        print(answer)
         status = {'remote_controlled': bool(answer[0][0] & 1),  # otherwise free access
                   'output_on': bool(answer[0][1] & 1),
                   'control_state': None,
