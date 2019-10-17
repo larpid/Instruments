@@ -29,7 +29,7 @@ class StoreStdOut(object):
         self.stdout_orig.flush(*args, **kwargs)
 
 
-def connect_by_serial_number(serial_connection, serial_number):
+def connect_by_serial_number(serial_connection, serial_number, idn_message='*IDN?\n', idn_answer_check_function=None):
     """handle connection by serial number instead of a fixed port
     returns: bool(connection successful?)
 
@@ -51,10 +51,17 @@ def connect_by_serial_number(serial_connection, serial_number):
             continue
 
         try:
-            serial_connection.write('*IDN?\n'.encode())
-            idn_line = serial_connection.readline().decode().split(',')
-            if len(idn_line) >= 3:
-                if idn_line[2] == serial_number:
+            serial_connection.write(idn_message.encode())
+            idn_line = serial_connection.readline()
+            if idn_answer_check_function is None:
+                idn_line = idn_line.decode().split(',')
+                if len(idn_line) >= 3:
+                    if idn_line[2] == serial_number:
+                        print('connection established to device %s with S/N: %s' %
+                              (comport.device, serial_number))
+                        return True
+            else:
+                if idn_answer_check_function(idn_line, serial_number):
                     print('connection established to device %s with S/N: %s' %
                           (comport.device, serial_number))
                     return True
