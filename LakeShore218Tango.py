@@ -148,7 +148,7 @@ class LakeShore218Tango(Device, metaclass=DeviceMeta):
 
         return 'temperature log', dict_of_sensor_temp_lists
 
-    @attribute
+    @attribute(dtype=bool)
     def log_status(self):
         return self.lake_shore.log_status()
 

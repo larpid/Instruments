@@ -53,6 +53,7 @@ class LakeShore218:
         self.ser.readline()  # wait for LOG command to finish
 
     def log_read(self, sensors=None):
+        """read contents of the temperature log"""
         if sensors is None:  # avoiding list as default value (mutable)
             sensors = [1, 2]
 
@@ -81,8 +82,10 @@ class LakeShore218:
             else:
                 data['date,time'].append(date_time)
 
+            print('.', end='')
+
         return data
 
     def log_status(self):
         self.ser.write('LOG?\n'.encode())
-        return bool(self.ser.readline().decode().strip())
+        return bool(int(self.ser.readline().decode().strip()))
