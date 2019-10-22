@@ -5,7 +5,8 @@ so far only used on device with serial: 2845070119
 
 from EAPS import EAPS
 import sys
-from tango import AttrWriteType, DispLevel
+from serial.serialutil import SerialException
+from tango import AttrWriteType, AttrQuality
 from PyTango import DevState, DebugIt, CmdArgType, Attr, Util
 from PyTango.server import run
 from PyTango.server import Device, DeviceMeta
@@ -158,6 +159,50 @@ class EAPSTango(Device, metaclass=DeviceMeta):
         return 'status_plus_set_values', {**status,
                                           'set_voltage': set_voltage,
                                           'set_current': set_current}
+
+    @attribute(dtype=float, unit='U')
+    def c1_actual_voltage(self):
+        if self.get_state() == DevState.ON:
+            try:
+                _, voltage, _ = self.eaps.read_status_plus_actual_values(1)
+                return voltage
+            except SerialException:
+                self.set_state(DevState.FAULT)
+                self.eaps.disconnect()
+                print('ERROR: port not open')
+
+    @attribute(dtype=float, unit='U')
+    def c2_actual_voltage(self):
+        if self.get_state() == DevState.ON:
+            try:
+                _, voltage, _ = self.eaps.read_status_plus_actual_values(2)
+                return voltage
+            except SerialException:
+                self.set_state(DevState.FAULT)
+                self.eaps.disconnect()
+                print('ERROR: port not open')
+
+    @attribute(dtype=float, unit='A')
+    def c1_actual_current(self):
+        if self.get_state() == DevState.ON:
+            try:
+                _, _, current = self.eaps.read_status_plus_actual_values(1)
+                return current
+            except SerialException:
+                self.set_state(DevState.FAULT)
+                self.eaps.disconnect()
+                print('ERROR: port not open')
+
+    @attribute(dtype=float, unit='A')
+    def c2_actual_current(self):
+        if self.get_state() == DevState.ON:
+            try:
+                _, _, current = self.eaps.read_status_plus_actual_values(2)
+                return current
+            except SerialException:
+                self.set_state(DevState.FAULT)
+                self.eaps.disconnect()
+                print('ERROR: port not open')
 
     @attribute(dtype=str)
     def server_message(self):

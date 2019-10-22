@@ -135,7 +135,7 @@ class EAPS:
     def connect(self):
         if self.ser.is_open:
             print('device already connected')
-            return
+            return True
 
         self.ser = serial.Serial(baudrate=115200,
                                  timeout=1,
@@ -157,14 +157,15 @@ class EAPS:
         # read nominal values
         self.ser.write(encode_eaps_message(1, True, 2, ''))
         _, _, self.nominal_voltage = decode_eaps_answer(self.ser.read(communication_object_answer_lengths[2]))
-        print('nominal voltage is %s' % self.nominal_voltage)
+        print('nominal voltage is %s V' % self.nominal_voltage)
         self.ser.write(encode_eaps_message(1, True, 3, ''))
         _, _, self.nominal_current = decode_eaps_answer(self.ser.read(communication_object_answer_lengths[2]))
-        print('nominal current is %s' % self.nominal_current)
+        print('nominal current is %s A' % self.nominal_current)
         self.ser.write(encode_eaps_message(1, True, 4, ''))
         _, _, self.nominal_power = decode_eaps_answer(self.ser.read(communication_object_answer_lengths[2]))
-        print('nominal power is %s' % self.nominal_power)
+        print('nominal power is %s W' % self.nominal_power)
 
+        print('connection established')
         return True
 
     def disconnect(self):
