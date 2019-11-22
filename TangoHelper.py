@@ -40,7 +40,7 @@ def connect_by_serial_number(serial_connection, serial_number, idn_message='*IDN
     for comport in list_ports.comports():
         serial_connection.port = comport.device
         serial_connection.open()
-        print('test connection established to device: %s' % comport.device)
+        print('test connection established to device: %s' % comport.device, end='')
 
         try:
             # lock port to prevent access from multiple scripts
@@ -53,6 +53,7 @@ def connect_by_serial_number(serial_connection, serial_number, idn_message='*IDN
         try:
             serial_connection.write(idn_message.encode())
             idn_line = serial_connection.readline()
+            print("\tIDN call answer: %s" % idn_line)
             if idn_answer_check_function is None:
                 idn_line = idn_line.decode().split(',')
                 if len(idn_line) >= 3:
