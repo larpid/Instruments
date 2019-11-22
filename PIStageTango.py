@@ -65,12 +65,12 @@ class PIStageTango(Device, metaclass=DeviceMeta):
                             display_level=DispLevel.EXPERT,
                             access=AttrWriteType.READ,
                             unit="fs",
-                            min_value=stage.position_min/299792458.0*10**12,
-                            max_value=stage.position_max/299792458.0*10**12)
+                            min_value=stage.position_min/299792458.0*10**12*2,
+                            max_value=stage.position_max/299792458.0*10**12*2)
 
     def read_position_fs(self):
-        # speed of light and 12 orders of magnitude to get from mm to fs
-        return self.stage.position_get()/299792458.0*10**12
+        # speed of light and 12 orders of magnitude to get from fs to mm, factor 2 for 2-way-light-travel
+        return self.stage.position_get()/299792458.0*10**12*2
 
     position_um = attribute(label="Position relative to set zero point", dtype=float,
                             display_level=DispLevel.EXPERT,
@@ -121,7 +121,8 @@ class PIStageTango(Device, metaclass=DeviceMeta):
 
     @command(dtype_in=float)
     def move_absolute_fs(self, new_pos_fs):
-        new_pos_mm = new_pos_fs*299792458.0*10**(-12)  # speed of light and 12 orders of magnitude to get from fs to mm
+        # speed of light and 12 orders of magnitude to get from fs to mm, factor 2 for 2-way-light-travel
+        new_pos_mm = new_pos_fs*299792458.0*10**(-12)/2
         self.move_absolute(new_pos_mm)
 
     def write_cmd_move_absolute_fs(self, new_pos):
