@@ -44,6 +44,7 @@ class MVC3GaugeControllerTango(Device, metaclass=DeviceMeta):
 
     @command
     def connect(self):
+        self.get_device_properties()
         self.set_state(DevState.INIT)
         if self.mvc3.connect():
             self.set_state(DevState.ON)
