@@ -18,7 +18,6 @@ class MVC3GaugeControllerTango(Device, metaclass=DeviceMeta):
 
     serial_address = device_property(dtype=int,  # store address in decimal (can be 1 - 126)
                                      default_value=1,
-                                     #update_db=True,
                                      doc="this is the devices serial address in decimal. Connection on this device is "
                                          "not done by asking for the serial number (not supported by device) but by "
                                          "asking for the RS485 Serial Address (can also be set/requested in the here "
@@ -28,9 +27,9 @@ class MVC3GaugeControllerTango(Device, metaclass=DeviceMeta):
                                          "be switched to RS485 and can then be switched back to RS232 immediately. "
                                          "Otherwise the address will reset on next device restart")
 
-    print(type(serial_address))
-    print(serial_address)
-    print('-.-.-.-.-.S')
+    pressure_decimal_places = device_property(dtype=int,
+                                              default_value=2,
+                                              doc="number of displayed decimal places on pressure readings")
 
     def init_device(self):
         sys.stdout = StoreStdOut()
@@ -70,17 +69,17 @@ class MVC3GaugeControllerTango(Device, metaclass=DeviceMeta):
                access=AttrWriteType.READ)
     def P1(self):
         """writes out errors and info too"""
-        return self.mvc3.read_pressure(1)
+        return self.mvc3.read_pressure(1, decimal_places=self.pressure_decimal_places)
 
     @attribute(dtype=str, unit='mBar', access=AttrWriteType.READ)
     def P2(self):
         """writes out errors and info too"""
-        return self.mvc3.read_pressure(2)
+        return self.mvc3.read_pressure(2, decimal_places=self.pressure_decimal_places)
 
     @attribute(dtype=str, unit='mBar', access=AttrWriteType.READ)
     def P3(self):
         """writes out errors and info too"""
-        return self.mvc3.read_pressure(3)
+        return self.mvc3.read_pressure(3, decimal_places=self.pressure_decimal_places)
 
 
 if __name__ == "__main__":
