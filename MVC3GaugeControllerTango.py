@@ -16,10 +16,25 @@ from TangoHelper import StoreStdOut
 
 class MVC3GaugeControllerTango(Device, metaclass=DeviceMeta):
 
-    serial_address = device_property(dtype=float)  # store address in decimal (can be 1 - 126)
+    serial_address = device_property(dtype=int,  # store address in decimal (can be 1 - 126)
+                                     default_value=1,
+                                     #update_db=True,
+                                     doc="this is the devices serial address in decimal. Connection on this device is "
+                                         "not done by asking for the serial number (not supported by device) but by "
+                                         "asking for the RS485 Serial Address (can also be set/requested in the here "
+                                         "used RS232 mode). These were manually set with SSA (e.g. 'RSA46\r' sets this "
+                                         "to hex value 46 which is 70 in decimal) command and are labeled on the case "
+                                         "of each device. IMPORTANT: after setting the serial address the device must "
+                                         "be switched to RS485 and can then be switched back to RS232 immediately. "
+                                         "Otherwise the address will reset on next device restart")
+
+    print(type(serial_address))
+    print(serial_address)
+    print('-.-.-.-.-.S')
 
     def init_device(self):
         sys.stdout = StoreStdOut()
+        self.get_device_properties()  # otherwise self.serial will be None
         self.mvc3 = MVC3GaugeController(self.serial_address)
         self.set_state(DevState.OFF)
         self.connect()  # try to auto connect on server start. can also be done manually
@@ -51,16 +66,20 @@ class MVC3GaugeControllerTango(Device, metaclass=DeviceMeta):
     def write_cmd_disconnect(self, _):
         self.disconnect()
 
-    @attribute(dtype=float, unit='mBar', access=AttrWriteType.READ)
+    @attribute(dtype=str, #unit='mBar',
+               access=AttrWriteType.READ)
     def P1(self):
+        """writes out errors and info too"""
         return self.mvc3.read_pressure(1)
 
-    @attribute(dtype=float, unit='mBar', access=AttrWriteType.READ)
+    @attribute(dtype=str, unit='mBar', access=AttrWriteType.READ)
     def P2(self):
+        """writes out errors and info too"""
         return self.mvc3.read_pressure(2)
 
-    @attribute(dtype=float, unit='mBar', access=AttrWriteType.READ)
+    @attribute(dtype=str, unit='mBar', access=AttrWriteType.READ)
     def P3(self):
+        """writes out errors and info too"""
         return self.mvc3.read_pressure(3)
 
 
