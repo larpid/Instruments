@@ -71,7 +71,7 @@ class MVC3GaugeController:
                            14: " FiLbr"}  # Filament defectively
 
         self.ser.write(('RPV%s\r' % channel).encode())
-        answer = self.ser.readline().decode().strip().split('\t')
+        answer = self.ser.read_until(b'\r').decode().strip().split('\t')
         if answer[0] == '?':
             if answer[1] == 'S,':
                 # no sensor on this channel connected
@@ -85,5 +85,10 @@ if __name__ == "__main__":
     """test code"""
     gc1 = MVC3GaugeController(70)
     gc1.connect()
+    print(gc1.read_pressure(2))
+    print(gc1.read_pressure(2))
+    print(gc1.read_pressure(2))
+    print(gc1.read_pressure(2))
+    print(gc1.read_pressure(2))
     print(gc1.read_pressure(2))
     gc1.disconnect()
