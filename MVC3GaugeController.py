@@ -78,7 +78,7 @@ class MVC3GaugeController:
                 return 'no sensor'
             else:
                 return 'ERROR: device reports error info %s' % answer
-        return "{:.{}f}".format(float(answer[1]), decimal_places) + status_messages[int(answer[0].strip(','))]
+        return "{:.{}e}".format(float(answer[1]), decimal_places) + status_messages[int(answer[0].strip(','))]
 
 
 if __name__ == "__main__":
