@@ -41,9 +41,9 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
     def server_message(self):
         return sys.stdout.read_stored_message()
 
-    @command
-    def testprint(self):
-        print('TEST!')
+    @command(dtype_in=int)
+    def controlKey_motor_CW_slow(self, num):
+        print('TEST! %s' % num)
 
     # @command
     # def connect(self):
