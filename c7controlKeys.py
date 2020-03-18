@@ -19,7 +19,7 @@ from tango import DeviceProxy, DeviceData
 from threading import Lock
 
 # global settings
-DEBUG = False
+DEBUG = True
 HEARTBEAT_DELAY = 50  # in ms (sends heartbeat every so often)
 
 
