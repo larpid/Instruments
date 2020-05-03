@@ -24,29 +24,37 @@ HEARTBEAT_DELAY = 50  # in ms (sends heartbeat every so often)
 
 
 class ControlKeys:
+    known_modifiers = ['shift', 'ctrl', 'alt', 'alt gr']
+
     def __init__(self):
         # thread shared objects
         self.active_beats_lock = Lock()
         self.active_beats = []
-        
+
         # only used by key_event function
         self.keys_held_down = []
         self.last_key_event_time = 0
-        
+
         # read only objects
         self.events = []
         self.device_proxies = {}
 
         # set up known events from config file
         print('evaluating config file...')
-        config_file = open('c7controlKeys.cfg', 'r')
+        config_file = open('c7controlKeys.ini', 'r')
         for textline in config_file.readlines():
             textline = textline.split('#')[0].strip('\n')
             if len(textline.strip()) > 0 and len(textline.split('\t')) == 5:
                 event = {}
-                event['key'], event['requires_keys_held_down'], event['type'], event['device'], event['command'] = \
+                event['key'], event['modify'], event['type'], event['device'], event['command'] = \
                     textline.split('\t')
-                event['requires_keys_held_down'] = event['requires_keys_held_down'].split(';')
+                if event['key'] in self.known_modifiers:
+                    raise RuntimeError("%s is a possible modifier key and therefore can't trigger its own event" %
+                                       event['key'])
+                event['modify'] = event['modify'].split(';')
+                for key in event['modify']:
+                    if key != '' and key not in self.known_modifiers:
+                        raise RuntimeError("unknown modifier: %s" % event['modify'])
                 if event['device'] not in self.device_proxies and \
                         event['type'] in ['tango_command', 'tango_controlKey']:
                     self.device_proxies[event['device']] = DeviceProxy(event['device'])
@@ -54,6 +62,9 @@ class ControlKeys:
                     self.events.append(event)
                 else:
                     print('event type unknown for line: %s' % textline)
+            else:
+                if len(textline.strip()) > 0:
+                    print("line \"%s\" has wrong number of tabs (use only one between each field)" % textline)
         config_file.close()
 
     def key_event(self, key):
@@ -67,14 +78,19 @@ class ControlKeys:
 
                 for event in self.events:
                     if event['key'] == key.name:
-                        # check required keys (e.g.: is "ctrl" pressed for "ctrl" + "m" combination?)
-                        required_keys_pressed = True
-                        for required_key in event['requires_keys_held_down']:
-                            if required_key.strip() != '' and not keyboard.is_pressed(required_key):
-                                required_keys_pressed = False
+
+                        # check required modifier keys (e.g.: is "ctrl" pressed for "ctrl" + "m" combination?)
+                        modifiers_active = True
+                        for modifier in self.known_modifiers:
+                            if (modifier in event['modify']) != keyboard.is_pressed(modifier):
+                                modifiers_active = False
+                                print(modifier + " " + str(event['modify']) + " " + str(keyboard.is_pressed(modifier)))
                                 break
-                        if not required_keys_pressed:
+                        if not modifiers_active:
                             continue
+
+                        if DEBUG:
+                            print(event['device'])
 
                         # choose action based on event type
                         if event['type'] == 'tango_command':
@@ -105,7 +121,7 @@ class ControlKeys:
             # send stop signal and unschedule heartbeat
             with self.active_beats_lock:
                 for event_index, event in enumerate(self.active_beats):
-                    if event['key'] == key.name or key.name in event['requires_keys_held_down']:
+                    if event['key'] == key.name or key.name in event['modify']:
                         # command parameter: 1=start, 0=stop, 2=heartbeat
                         self.device_proxies[event['device']].command_inout(event['command'], 0)  # 0 stops
                         self.active_beats[event_index] = None  # removes active heartbeat
