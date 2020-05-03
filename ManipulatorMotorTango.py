@@ -44,7 +44,6 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
         self.active_controlKey_action_lock = Lock()
         self.set_state(DevState.ON)
         self.action_thread = Thread(target=self.action_thread_method, daemon=True)
-        self.init_device()
 
     def action_thread_method(self):
         if self.active_controlKey_action is not None:
