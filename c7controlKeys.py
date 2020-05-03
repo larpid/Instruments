@@ -142,4 +142,4 @@ if __name__ == "__main__":
         with ck.active_beats_lock:
             for event in ck.active_beats:
                 ck.device_proxies[event['device']].command_inout(event['command'], 2)  # 2 beats
-        time.sleep(HEARTBEAT_DELAY/1000)
+        time.sleep(HEARTBEAT_DELAY/1000.0)
