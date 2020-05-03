@@ -19,20 +19,20 @@ from TangoHelper import StoreStdOut
 class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
 
     speed = device_property(dtype=float,
-                            default_value=100,
+                            default_value=100.0,
                             doc="standard mode rotation speed given as step pulses per second")
 
     speed_fast = device_property(dtype=float,
-                                 default_value=500,
+                                 default_value=500.0,
                                  doc="fast mode rotation speed given as step pulses per second.")
 
     movement_chunk_duration = device_property(dtype=float,
-                                             default_value=50,
+                                             default_value=50.0,
                                              doc="time (in ms) of a single chunk of the continuous motion.\n" +
                                              "no heartbeat checks are made in between.")
 
     max_heartbeat_distance = device_property(dtype=float,
-                                             default_value=150,
+                                             default_value=150.0,
                                              doc="maximum time (in ms) since last received heartbeat.\n" +
                                              "if time is exceeded continuous motion will be terminated.\n" +
                                              "should be more than movement_chunk_duration")
