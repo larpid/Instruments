@@ -15,7 +15,7 @@ class ManipulatorMotor:
     GPIO.setup(6, GPIO.OUT)  # rotation direction
     GPIO.setup(13, GPIO.OUT)  # turns all windings off (no movement or holding torque)
     GPIO.setup(19, GPIO.OUT)  # step angle: ON means basic, OFF means set by driver switch
-    atexit.register(GPIO.cleanup())
+    atexit.register(lambda: GPIO.cleanup())
 
     # idle GPIO setting:
     GPIO.output(26, GPIO.LOW)
@@ -27,7 +27,7 @@ class ManipulatorMotor:
     def move(cls, direction_is_cw, pulse_frequency, duration):
         """this is a blocking function. it should therefore be called repeatedly with short durations"""
 
-        pulse_distance = (1/pulse_frequency)
+        pulse_distance = (1.0/pulse_frequency)
 
         # turn windings on
         GPIO.output(13, GPIO.LOW)
@@ -52,8 +52,10 @@ class ManipulatorMotor:
 if __name__ == "__main__":
     """test code"""
     import sys
-    print("this test usage calls ManipulatorMotor.move(direction_is_cw, pulse_frequency, duration)")
+    print("this test usage calls ManipulatorMotor.move(True, pulse_frequency, duration)")
     if len(sys.argv) == 3:
+        sys.argv[1] = float(sys.argv[1])
+        sys.argv[2] = float(sys.argv[2])
         ManipulatorMotor.move(*sys.argv)
     else:
-        print("test usage needs exactly 3 arguments.")
+        print("test usage needs pulse_frequency and duration. e.g.: \"python3 ManipulatorMotor.py 500 1\"")
