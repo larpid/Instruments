@@ -39,18 +39,21 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
 
     def init_device(self):
         sys.stdout = StoreStdOut()
+        self.get_device_properties()  # without this all device properties are None
         self.active_controlKey_action = None
         # needed to reliably setup the action. its methods dont need thread safety
         self.active_controlKey_action_lock = Lock()
         self.set_state(DevState.ON)
         self.action_thread = Thread(target=self.action_thread_method, daemon=True)
+        self.action_thread.start()
 
     def action_thread_method(self):
-        if self.active_controlKey_action is not None:
-            action_survived = self.active_controlKey_action.execute_next_chunk()
-            if not action_survived:
-                with self.active_controlKey_action_lock:
-                    self.active_controlKey_action = None
+        while True:
+            if self.active_controlKey_action is not None:
+                action_survived = self.active_controlKey_action.execute_next_chunk()
+                if not action_survived:
+                    with self.active_controlKey_action_lock:
+                        self.active_controlKey_action = None
 
     @attribute(dtype=str)
     def server_message(self):
@@ -61,80 +64,84 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
         def move_one_chunk():
             ManipulatorMotor.move(True, self.speed, self.movement_chunk_duration)
 
-        if command_code == 0:
+        if command_code == 1:
             # start action
             self.set_state(DevState.MOVING)
             with self.active_controlKey_action_lock:
                 self.active_controlKey_action = ControlKeyAction("motor_CW",
                                                                  move_one_chunk, self.max_heartbeat_distance)
-        elif command_code == 1:
+        elif command_code == 0:
             # end action
             self.set_state(DevState.ON)
             with self.active_controlKey_action_lock:
                 self.active_controlKey_action = None
         elif command_code == 2:
             # update beat time
-            self.active_controlKey_action.heartbeat("motor_CW")
+            if self.active_controlKey_action is not None:
+                self.active_controlKey_action.heartbeat("motor_CW")
 
     @command(dtype_in=int)
     def controlKey_motor_CW_fast(self, command_code):
         def move_one_chunk():
             ManipulatorMotor.move(True, self.speed_fast, self.movement_chunk_duration)
 
-        if command_code == 0:
+        if command_code == 1:
             # start action
             self.set_state(DevState.MOVING)
             with self.active_controlKey_action_lock:
                 self.active_controlKey_action = ControlKeyAction("motor_CW_fast",
                                                                  move_one_chunk, self.max_heartbeat_distance)
-        elif command_code == 1:
+        elif command_code == 0:
             # end action
             self.set_state(DevState.ON)
             with self.active_controlKey_action_lock:
                 self.active_controlKey_action = None
         elif command_code == 2:
             # update beat time
-            self.active_controlKey_action.heartbeat("motor_CW_fast")
+            if self.active_controlKey_action is not None:
+                self.active_controlKey_action.heartbeat("motor_CW_fast")
 
     @command(dtype_in=int)
     def controlKey_motor_CCW(self, command_code):
         def move_one_chunk():
             ManipulatorMotor.move(False, self.speed, self.movement_chunk_duration)
 
-        if command_code == 0:
+        if command_code == 1:
             # start action
             self.set_state(DevState.MOVING)
             with self.active_controlKey_action_lock:
                 self.active_controlKey_action = ControlKeyAction("motor_CCW",
                                                                  move_one_chunk, self.max_heartbeat_distance)
-        elif command_code == 1:
+        elif command_code == 0:
             # end action
             self.set_state(DevState.ON)
             with self.active_controlKey_action_lock:
                 self.active_controlKey_action = None
         elif command_code == 2:
             # update beat time
-            self.active_controlKey_action.heartbeat("motor_CCW")
+            if self.active_controlKey_action is not None:
+                self.active_controlKey_action.heartbeat("motor_CCW")
 
     @command(dtype_in=int)
     def controlKey_motor_CCW_fast(self, command_code):
         def move_one_chunk():
             ManipulatorMotor.move(False, self.speed_fast, self.movement_chunk_duration)
 
-        if command_code == 0:
+        if command_code == 1:
             # start action
             self.set_state(DevState.MOVING)
             with self.active_controlKey_action_lock:
                 self.active_controlKey_action = ControlKeyAction("motor_CCW_fast",
                                                                  move_one_chunk, self.max_heartbeat_distance)
-        elif command_code == 1:
+        elif command_code == 0:
             # end action
             self.set_state(DevState.ON)
             with self.active_controlKey_action_lock:
                 self.active_controlKey_action = None
         elif command_code == 2:
             # update beat time
-            self.active_controlKey_action.heartbeat("motor_CCW_fast")
+            if self.active_controlKey_action is not None:
+                self.active_controlKey_action.heartbeat("motor_CCW_fast")
 
 
 class ControlKeyAction:
