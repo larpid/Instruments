@@ -45,11 +45,15 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
         self.active_controlKey_action_lock = Lock()
         self.set_state(DevState.ON)
         self.action_thread = Thread(target=self.action_thread_method, daemon=True)
+        self.thread_start_time = time.time()
         self.action_thread.start()
 
     def action_thread_method(self):
-        while True:
+        thread_internal_start_time = self.thread_start_time
+        # check is used to end thread on device reinitialization
+        while thread_internal_start_time == self.thread_start_time:
             if self.active_controlKey_action is not None:
+                print(thread_internal_start_time)
                 action_survived = self.active_controlKey_action.execute_next_chunk()
                 if not action_survived:
                     with self.active_controlKey_action_lock:
