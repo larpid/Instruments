@@ -70,17 +70,32 @@ class MVC3GaugeControllerTango(Device, metaclass=DeviceMeta):
                access=AttrWriteType.READ)
     def P1(self):
         """writes out errors and info too"""
-        return self.mvc3.read_pressure(1, decimal_places=self.pressure_decimal_places)
+        try:
+            return self.mvc3.read_pressure(1, decimal_places=self.pressure_decimal_places)
+        # yes, general exception catching is not good but cs studio otherwise hides this completely (even worse)
+        except Exception as e:
+            self.set_state(DevState.FAULT)
+            return "ERROR: %s" % e
 
     @attribute(dtype=str, unit='mBar', access=AttrWriteType.READ)
     def P2(self):
         """writes out errors and info too"""
-        return self.mvc3.read_pressure(2, decimal_places=self.pressure_decimal_places)
+        try:
+            return self.mvc3.read_pressure(2, decimal_places=self.pressure_decimal_places)
+        # yes, general exception catching is not good but cs studio otherwise hides this completely (even worse)
+        except Exception as e:
+            self.set_state(DevState.FAULT)
+            return "ERROR: %s" % e
 
     @attribute(dtype=str, unit='mBar', access=AttrWriteType.READ)
     def P3(self):
         """writes out errors and info too"""
-        return self.mvc3.read_pressure(3, decimal_places=self.pressure_decimal_places)
+        try:
+            return self.mvc3.read_pressure(3, decimal_places=self.pressure_decimal_places)
+        # yes, general exception catching is not good but cs studio otherwise hides this completely (even worse)
+        except Exception as e:
+            self.set_state(DevState.FAULT)
+            return "ERROR: %s" % e
 
 
 if __name__ == "__main__":
