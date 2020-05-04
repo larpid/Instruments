@@ -26,12 +26,12 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
                                  default_value=500.0,
                                  doc="fast mode rotation speed given as step pulses per second.")
 
-    movement_chunk_duration = device_property(dtype=float,
+    movement_chunk_duration_ms = device_property(dtype=float,
                                              default_value=50.0,
                                              doc="time (in ms) of a single chunk of the continuous motion.\n" +
                                              "no heartbeat checks are made in between.")
 
-    max_heartbeat_distance = device_property(dtype=float,
+    max_heartbeat_distance_ms = device_property(dtype=float,
                                              default_value=150.0,
                                              doc="maximum time (in ms) since last received heartbeat.\n" +
                                              "if time is exceeded continuous motion will be terminated.\n" +
@@ -62,14 +62,14 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
     @command(dtype_in=int)
     def controlKey_motor_CW(self, command_code):
         def move_one_chunk():
-            ManipulatorMotor.move(True, self.speed, self.movement_chunk_duration)
+            ManipulatorMotor.move(True, self.speed, self.movement_chunk_duration_ms/1000.0)
 
         if command_code == 1:
             # start action
             self.set_state(DevState.MOVING)
             with self.active_controlKey_action_lock:
                 self.active_controlKey_action = ControlKeyAction("motor_CW",
-                                                                 move_one_chunk, self.max_heartbeat_distance)
+                                                                 move_one_chunk, self.max_heartbeat_distance_ms)
         elif command_code == 0:
             # end action
             self.set_state(DevState.ON)
@@ -83,14 +83,14 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
     @command(dtype_in=int)
     def controlKey_motor_CW_fast(self, command_code):
         def move_one_chunk():
-            ManipulatorMotor.move(True, self.speed_fast, self.movement_chunk_duration)
+            ManipulatorMotor.move(True, self.speed_fast, self.movement_chunk_duration_ms/1000.0)
 
         if command_code == 1:
             # start action
             self.set_state(DevState.MOVING)
             with self.active_controlKey_action_lock:
                 self.active_controlKey_action = ControlKeyAction("motor_CW_fast",
-                                                                 move_one_chunk, self.max_heartbeat_distance)
+                                                                 move_one_chunk, self.max_heartbeat_distance_ms)
         elif command_code == 0:
             # end action
             self.set_state(DevState.ON)
@@ -104,14 +104,14 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
     @command(dtype_in=int)
     def controlKey_motor_CCW(self, command_code):
         def move_one_chunk():
-            ManipulatorMotor.move(False, self.speed, self.movement_chunk_duration)
+            ManipulatorMotor.move(False, self.speed, self.movement_chunk_duration_ms/1000.0)
 
         if command_code == 1:
             # start action
             self.set_state(DevState.MOVING)
             with self.active_controlKey_action_lock:
                 self.active_controlKey_action = ControlKeyAction("motor_CCW",
-                                                                 move_one_chunk, self.max_heartbeat_distance)
+                                                                 move_one_chunk, self.max_heartbeat_distance_ms)
         elif command_code == 0:
             # end action
             self.set_state(DevState.ON)
@@ -125,14 +125,14 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
     @command(dtype_in=int)
     def controlKey_motor_CCW_fast(self, command_code):
         def move_one_chunk():
-            ManipulatorMotor.move(False, self.speed_fast, self.movement_chunk_duration)
+            ManipulatorMotor.move(False, self.speed_fast, self.movement_chunk_duration_ms/1000.0)
 
         if command_code == 1:
             # start action
             self.set_state(DevState.MOVING)
             with self.active_controlKey_action_lock:
                 self.active_controlKey_action = ControlKeyAction("motor_CCW_fast",
-                                                                 move_one_chunk, self.max_heartbeat_distance)
+                                                                 move_one_chunk, self.max_heartbeat_distance_ms)
         elif command_code == 0:
             # end action
             self.set_state(DevState.ON)
