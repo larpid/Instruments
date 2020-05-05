@@ -61,11 +61,14 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
     def action_thread_method(self):
         print("background movement thread started")
         while not self.device_stop_requested.is_set():
+            next_action_chunk = None
             with self.active_controlKey_action_lock:
                 if self.active_controlKey_action is not None:
-                    action_survived = self.active_controlKey_action.execute_next_chunk()
-                    if not action_survived:
+                    next_action_chunk = self.active_controlKey_action.get_next_chunk()
+                    if next_action_chunk is None:  # i.e. action did not survive (heartbeat not in time)
                         self.active_controlKey_action = None
+            if next_action_chunk is not None:
+                next_action_chunk()
         print("background movement thread terminated")
 
     @attribute(dtype=str)
@@ -173,16 +176,15 @@ class ControlKeyAction:
         if name == self.name:
             self.last_heartbeat = time.time()
 
-    def execute_next_chunk(self):
+    def get_next_chunk(self):
         """should repeatedly be called to get somewhat continuous motion. use return value to delete action"""
         if self.action_alive and time.time() - self.last_heartbeat < self.max_heartbeat_distance:
-            self.act()
-            return True
+            return self.act
         else:
             if not self.action_alive:
                 print("ERROR: tried to continue dead action")
                 self.action_alive = False
-            return False
+            return None
 
 
 if __name__ == "__main__":
