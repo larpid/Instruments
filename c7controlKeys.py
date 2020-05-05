@@ -14,6 +14,7 @@ script needs tango and epics installed (sth like:
 
 import keyboard
 import time
+import os
 from tango import DeviceProxy, DeviceData
 #import epics
 from threading import Lock
@@ -41,7 +42,7 @@ class ControlKeys:
 
         # set up known events from config file
         print('evaluating config file...')
-        config_file = open('c7controlKeys.ini', 'r')
+        config_file = open(os.path.join(os.path.dirname(__file__), 'c7controlKeys.ini'), 'r')
         for textline in config_file.readlines():
             textline = textline.split('#')[0].strip('\n')
             if len(textline.strip()) > 0 and len(textline.split('\t')) == 5:
