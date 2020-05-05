@@ -173,7 +173,7 @@ class ControlKeyAction:
         if name == self.name:
             self.last_heartbeat = time.time()
 
-    def get_next_chunk(self):
+    def execute_next_chunk(self):
         """should repeatedly be called to get somewhat continuous motion. use return value to delete action"""
         if self.action_alive and time.time() - self.last_heartbeat < self.max_heartbeat_distance:
             self.act()
