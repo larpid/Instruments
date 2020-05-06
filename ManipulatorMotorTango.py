@@ -49,6 +49,7 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
         self.active_controlKey_action = None
         self.active_controlKey_action_lock = threading.Lock()
         self.device_stop_requested = threading.Event()
+        self.next_chunk_unready = threading.Event()
         self.next_action_queue = queue.Queue()
         self.next_chunk_ready = threading.Event()
         self.chunk_start_thread = threading.Thread(target=self.chunk_start_thread_method, daemon=True)
@@ -83,6 +84,8 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
                     self.next_action_queue.put((direction_is_cw, pulse_distance))
 
                     while action_exists:
+                        self.next_chunk_unready.wait()
+                        self.next_chunk_unready.clear()
                         # check for a next chunk
                         next_chunk_ready = False
                         with self.active_controlKey_action_lock:
@@ -111,6 +114,9 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
             with ManipulatorMotor.PulseRotationMode(direction_is_cw) as prm:
                 while self.next_chunk_ready.is_set():
                     self.next_chunk_ready.clear()
+                    self.next_chunk_unready.set()
+                    ManipulatorMotor.move(True, 1.0/pulse_distance, chunk_duration)
+
                     chunk_start_time = time.time()
                     next_pulse_time = chunk_start_time
                     while next_pulse_time - chunk_start_time < chunk_duration:
