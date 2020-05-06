@@ -9,6 +9,7 @@ from ManipulatorMotor import ManipulatorMotor
 import sys
 import time
 import threading
+import queue
 from serial.serialutil import SerialException
 from tango import AttrWriteType
 import tango
@@ -48,57 +49,75 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
         self.active_controlKey_action = None
         self.active_controlKey_action_lock = threading.Lock()
         self.device_stop_requested = threading.Event()
-        self.action_thread = threading.Thread(target=self.action_thread_method, daemon=True)
-        self.action_thread.start()
+        self.next_action_queue = queue.SimpleQueue()
+        self.next_chunk_ready = threading.Event()
+        self.chunk_start_thread = threading.Thread(target=self.chunk_start_thread_method, daemon=True)
+        self.pulse_thread = threading.Thread(target=self.pulse_thread_method)
+        self.chunk_start_thread.start()
+        self.pulse_thread.start()
         self.set_state(DevState.ON)
 
     def delete_device(self):
         print("stopping device server instance")
         self.device_stop_requested.set()
-        self.action_thread.join()
+        self.chunk_start_thread.join()
+        self.pulse_thread.join()
         print("all clear")
 
-    def action_thread_method(self):
-        print("background movement thread started")
+    def chunk_start_thread_method(self):
+        print("chunk start thread started")
         while not self.device_stop_requested.is_set():
 
             # prepare new action
             action_exists = False
             with self.active_controlKey_action_lock:
                 if self.active_controlKey_action is not None:
-                    action_exists = True
-                    pulse_distance = 1.0 / self.active_controlKey_action.pulse_frequency
                     direction_is_cw = self.active_controlKey_action.direction_is_cw
+                    pulse_distance = 1.0 / self.active_controlKey_action.pulse_frequency
+                    action_exists = True
 
             # routinely execute action in movement mode
             if action_exists:
-                with ManipulatorMotor.PulseRotationMode(direction_is_cw) as prm:
-                    next_pulse_time = time.time()
-                    chunk_duration = self.movement_chunk_duration_ms / 1000.0
-                    while action_exists:
+                if self.next_action_queue.empty():
+                    self.next_chunk_ready.set()
+                    self.next_action_queue.put([direction_is_cw, pulse_distance])
 
+                    while action_exists:
                         # check for a next chunk
                         next_chunk_ready = False
                         with self.active_controlKey_action_lock:
                             if self.active_controlKey_action is None:
                                 action_exists = False
                             else:
-                                next_chunk_ready = self.active_controlKey_action.next_chunk_ready()
-                                if not next_chunk_ready:
+                                if self.active_controlKey_action.next_chunk_ready():
+                                    self.next_chunk_ready.set()
+                                else:
                                     self.active_controlKey_action = None
                                     action_exists = False
+                    else:
+                        self.next_chunk_ready.clear()
 
-                        # chunk pulse loop
-                        if next_chunk_ready:
-                            chunk_start_time = time.time()
-                            while next_pulse_time - chunk_start_time < chunk_duration:
-                                current_time = time.time()
-                                if current_time < next_pulse_time:
-                                    time.sleep(next_pulse_time - current_time)
-                                prm.move_one_step()
-                                next_pulse_time = current_time + pulse_distance
+        print("chunk start thread terminated")
 
-        print("background movement thread terminated")
+    def pulse_thread_method(self):
+        print("pulse thread started")
+        while not self.device_stop_requested.is_set():
+            direction_is_cw, pulse_distance = self.next_action_queue.get()
+            chunk_duration = self.movement_chunk_duration_ms / 1000.0
+
+            with ManipulatorMotor.PulseRotationMode(direction_is_cw) as prm:
+                while self.next_chunk_ready.is_set():
+                    self.next_chunk_ready.clear()
+                    chunk_start_time = time.time()
+                    next_pulse_time = chunk_start_time
+                    while next_pulse_time - chunk_start_time < chunk_duration:
+                        current_time = time.time()
+                        if current_time < next_pulse_time:
+                            time.sleep(next_pulse_time - current_time)
+                        prm.move_one_step()
+                        next_pulse_time = current_time + pulse_distance
+
+        print("pulse thread terminated")
 
     @attribute(dtype=str)
     def server_message(self):
