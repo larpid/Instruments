@@ -23,8 +23,8 @@ class ManipulatorMotor:
     GPIO.output(13, GPIO.HIGH)  # leaving it off would make the motor get very hot
     GPIO.output(19, GPIO.LOW)
 
-    @classmethod
-    def move(cls, direction_is_cw, pulse_frequency, duration):
+    @staticmethod
+    def move(direction_is_cw, pulse_frequency, duration):
         """this is a blocking function. it should therefore be called repeatedly with short durations"""
 
         pulse_distance = (1.0/pulse_frequency)
@@ -47,6 +47,33 @@ class ManipulatorMotor:
 
         # turn windings off again
         GPIO.output(13, GPIO.HIGH)
+
+    class PulseRotationMode:
+        """context manager to handle the wiring turn off and direction pin"""
+
+        def __init__(self, direction_is_cw):
+            # set rotation direction
+            if direction_is_cw:
+                GPIO.output(6, GPIO.HIGH)
+            else:
+                GPIO.output(6, GPIO.LOW)
+
+        def __enter__(self):
+            # turn windings on
+            GPIO.output(13, GPIO.LOW)
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            # turn windings off
+            GPIO.output(13, GPIO.HIGH)
+
+        @staticmethod
+        def move_one_step():
+            """timing managed by caller"""
+
+            GPIO.output(26, GPIO.HIGH)
+            time.sleep(.000001)
+            GPIO.output(26, GPIO.LOW)
+            time.sleep(.000001)  # guarantees a minimum pulse distance (not necessarily needed)
 
 
 if __name__ == "__main__":

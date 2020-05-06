@@ -61,14 +61,43 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
     def action_thread_method(self):
         print("background movement thread started")
         while not self.device_stop_requested.is_set():
-            next_action_chunk = None
+
+            # prepare new action
+            action_exists = False
             with self.active_controlKey_action_lock:
                 if self.active_controlKey_action is not None:
-                    next_action_chunk = self.active_controlKey_action.get_next_chunk()
-                    if next_action_chunk is None:  # i.e. action did not survive (heartbeat not in time)
-                        self.active_controlKey_action = None
-            if next_action_chunk is not None:
-                next_action_chunk()
+                    action_exists = True
+                    pulse_distance = 1.0 / self.active_controlKey_action.pulse_frequency
+                    direction_is_cw = self.active_controlKey_action.direction_is_cw
+
+            # routinely execute action in movement mode
+            if action_exists:
+                with ManipulatorMotor.PulseRotationMode(direction_is_cw) as prm:
+                    next_pulse_time = time.time()
+                    chunk_duration = self.movement_chunk_duration_ms / 1000.0
+                    while action_exists:
+
+                        # check for a next chunk
+                        next_chunk_ready = False
+                        with self.active_controlKey_action_lock:
+                            if self.active_controlKey_action is None:
+                                action_exists = False
+                            else:
+                                next_chunk_ready = self.active_controlKey_action.next_chunk_ready()
+                                if not next_chunk_ready:
+                                    self.active_controlKey_action = None
+                                    action_exists = False
+
+                        # chunk pulse loop
+                        if next_chunk_ready:
+                            chunk_start_time = time.time()
+                            while next_pulse_time - chunk_start_time < chunk_duration:
+                                current_time = time.time()
+                                if current_time < next_pulse_time:
+                                    time.sleep(next_pulse_time - current_time)
+                                prm.move_one_step()
+                                next_pulse_time = current_time + pulse_distance
+
         print("background movement thread terminated")
 
     @attribute(dtype=str)
@@ -151,8 +180,8 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
             self.set_state(DevState.MOVING)
             self.get_device_properties()
             with self.active_controlKey_action_lock:
-                self.active_controlKey_action = ControlKeyAction("motor_CCW_fast",
-                                                                 move_one_chunk, self.max_heartbeat_distance_ms)
+                self.active_controlKey_action = ControlKeyAction("motor_CCW_fast", False, self.speed_fast,
+                                                                 self.max_heartbeat_distance_ms/1000.0)
         elif command_code == 0:
             # end action
             self.set_state(DevState.ON)
@@ -165,26 +194,27 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
 
 
 class ControlKeyAction:
-    def __init__(self, name, chunk_method, max_heartbeat_distance_ms):
-        self.name = name
-        self.act = chunk_method  # provides one short (not dividable) chunk of the continuous action
-        self.max_heartbeat_distance = max_heartbeat_distance_ms/1000.0
-        self.last_heartbeat = time.time()
-        self.action_alive = True
+    def __init__(self, name, direction_is_cw, pulse_frequency, max_heartbeat_distance):
+        self._name = name
+        self.direction_is_cw = direction_is_cw
+        self.pulse_frequency = pulse_frequency
+        self._max_heartbeat_distance = max_heartbeat_distance
+        self._last_heartbeat = time.time()
+        self._action_alive = True
 
     def heartbeat(self, name):
-        if name == self.name:
-            self.last_heartbeat = time.time()
+        if name == self._name:
+            self._last_heartbeat = time.time()
 
-    def get_next_chunk(self):
-        """should repeatedly be called to get somewhat continuous motion. use return value to delete action"""
-        if self.action_alive and time.time() - self.last_heartbeat < self.max_heartbeat_distance:
-            return self.act
+    def next_chunk_ready(self):
+        """permits execution of next chunk. action should be deleted if False returned"""
+        if self._action_alive and time.time() - self._last_heartbeat < self._max_heartbeat_distance:
+            return True
         else:
-            if not self.action_alive:
+            if not self._action_alive:
                 print("ERROR: tried to continue dead action")
-                self.action_alive = False
-            return None
+                self._action_alive = False
+            return False
 
 
 if __name__ == "__main__":
