@@ -114,8 +114,8 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
             self.set_state(DevState.MOVING)
             self.get_device_properties()
             with self.active_controlKey_action_lock:
-                self.active_controlKey_action = ControlKeyAction("motor_CW",
-                                                                 move_one_chunk, self.max_heartbeat_distance_ms)
+                self.active_controlKey_action = ControlKeyAction("motor_CW", True, self.speed,
+                                                                 self.max_heartbeat_distance_ms/1000.0)
         elif command_code == 0:
             # end action
             self.set_state(DevState.ON)
@@ -128,16 +128,13 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
 
     @command(dtype_in=int)
     def controlKey_motor_CW_fast(self, command_code):
-        def move_one_chunk():
-            ManipulatorMotor.move(True, self.speed_fast, self.movement_chunk_duration_ms/1000.0)
-
         if command_code == 1:
             # start action
             self.set_state(DevState.MOVING)
             self.get_device_properties()
             with self.active_controlKey_action_lock:
-                self.active_controlKey_action = ControlKeyAction("motor_CW_fast",
-                                                                 move_one_chunk, self.max_heartbeat_distance_ms)
+                self.active_controlKey_action = ControlKeyAction("motor_CW_fast", True, self.speed_fast,
+                                                                 self.max_heartbeat_distance_ms/1000.0)
         elif command_code == 0:
             # end action
             self.set_state(DevState.ON)
@@ -150,16 +147,13 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
 
     @command(dtype_in=int)
     def controlKey_motor_CCW(self, command_code):
-        def move_one_chunk():
-            ManipulatorMotor.move(False, self.speed, self.movement_chunk_duration_ms/1000.0)
-
         if command_code == 1:
             # start action
             self.set_state(DevState.MOVING)
             self.get_device_properties()
             with self.active_controlKey_action_lock:
-                self.active_controlKey_action = ControlKeyAction("motor_CCW",
-                                                                 move_one_chunk, self.max_heartbeat_distance_ms)
+                self.active_controlKey_action = ControlKeyAction("motor_CCW", False, self.speed,
+                                                                 self.max_heartbeat_distance_ms/1000.0)
         elif command_code == 0:
             # end action
             self.set_state(DevState.ON)
@@ -172,9 +166,6 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
 
     @command(dtype_in=int)
     def controlKey_motor_CCW_fast(self, command_code):
-        def move_one_chunk():
-            ManipulatorMotor.move(False, self.speed_fast, self.movement_chunk_duration_ms/1000.0)
-
         if command_code == 1:
             # start action
             self.set_state(DevState.MOVING)

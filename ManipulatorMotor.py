@@ -61,6 +61,7 @@ class ManipulatorMotor:
         def __enter__(self):
             # turn windings on
             GPIO.output(13, GPIO.LOW)
+            return self
 
         def __exit__(self, exc_type, exc_val, exc_tb):
             # turn windings off
