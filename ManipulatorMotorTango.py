@@ -52,7 +52,7 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
         self.next_action_queue = queue.SimpleQueue()
         self.next_chunk_ready = threading.Event()
         self.chunk_start_thread = threading.Thread(target=self.chunk_start_thread_method, daemon=True)
-        self.pulse_thread = threading.Thread(target=self.pulse_thread_method)
+        self.pulse_thread = threading.Thread(target=self.pulse_thread_method, daemon=True)
         self.chunk_start_thread.start()
         self.pulse_thread.start()
         self.set_state(DevState.ON)
@@ -102,20 +102,22 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
     def pulse_thread_method(self):
         print("pulse thread started")
         while not self.device_stop_requested.is_set():
-            direction_is_cw, pulse_distance = self.next_action_queue.get()
-            chunk_duration = self.movement_chunk_duration_ms / 1000.0
+            direction_is_cw = None
+            direction_is_cw, pulse_distance = self.next_action_queue.get(timeout=.01)
 
-            with ManipulatorMotor.PulseRotationMode(direction_is_cw) as prm:
-                while self.next_chunk_ready.is_set():
-                    self.next_chunk_ready.clear()
-                    chunk_start_time = time.time()
-                    next_pulse_time = chunk_start_time
-                    while next_pulse_time - chunk_start_time < chunk_duration:
-                        current_time = time.time()
-                        if current_time < next_pulse_time:
-                            time.sleep(next_pulse_time - current_time)
-                        prm.move_one_step()
-                        next_pulse_time = current_time + pulse_distance
+            if direction_is_cw is not None:
+                chunk_duration = self.movement_chunk_duration_ms / 1000.0
+                with ManipulatorMotor.PulseRotationMode(direction_is_cw) as prm:
+                    while self.next_chunk_ready.is_set():
+                        self.next_chunk_ready.clear()
+                        chunk_start_time = time.time()
+                        next_pulse_time = chunk_start_time
+                        while next_pulse_time - chunk_start_time < chunk_duration:
+                            current_time = time.time()
+                            if current_time < next_pulse_time:
+                                time.sleep(next_pulse_time - current_time)
+                            prm.move_one_step()
+                            next_pulse_time = current_time + pulse_distance - 0.000002
 
         print("pulse thread terminated")
 
