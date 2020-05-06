@@ -80,7 +80,7 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
             if action_exists:
                 if self.next_action_queue.empty():
                     self.next_chunk_ready.set()
-                    self.next_action_queue.put([direction_is_cw, pulse_distance])
+                    self.next_action_queue.put((direction_is_cw, pulse_distance))
 
                     while action_exists:
                         # check for a next chunk
@@ -102,22 +102,23 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
     def pulse_thread_method(self):
         print("pulse thread started")
         while not self.device_stop_requested.is_set():
-            direction_is_cw = None
-            direction_is_cw, pulse_distance = self.next_action_queue.get(timeout=.01)
+            try:
+                direction_is_cw, pulse_distance = self.next_action_queue.get(block=False)
+            except queue.Empty:
+                continue
 
-            if direction_is_cw is not None:
-                chunk_duration = self.movement_chunk_duration_ms / 1000.0
-                with ManipulatorMotor.PulseRotationMode(direction_is_cw) as prm:
-                    while self.next_chunk_ready.is_set():
-                        self.next_chunk_ready.clear()
-                        chunk_start_time = time.time()
-                        next_pulse_time = chunk_start_time
-                        while next_pulse_time - chunk_start_time < chunk_duration:
-                            current_time = time.time()
-                            if current_time < next_pulse_time:
-                                time.sleep(next_pulse_time - current_time)
-                            prm.move_one_step()
-                            next_pulse_time = current_time + pulse_distance - 0.000002
+            chunk_duration = self.movement_chunk_duration_ms / 1000.0
+            with ManipulatorMotor.PulseRotationMode(direction_is_cw) as prm:
+                while self.next_chunk_ready.is_set():
+                    self.next_chunk_ready.clear()
+                    chunk_start_time = time.time()
+                    next_pulse_time = chunk_start_time
+                    while next_pulse_time - chunk_start_time < chunk_duration:
+                        current_time = time.time()
+                        if current_time < next_pulse_time:
+                            time.sleep(next_pulse_time - current_time)
+                        prm.move_one_step()
+                        next_pulse_time = current_time + pulse_distance
 
         print("pulse thread terminated")
 
@@ -127,9 +128,6 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
 
     @command(dtype_in=int)
     def controlKey_motor_CW(self, command_code):
-        def move_one_chunk():
-            ManipulatorMotor.move(True, self.speed, self.movement_chunk_duration_ms/1000.0)
-
         if command_code == 1:
             # start action
             self.set_state(DevState.MOVING)
