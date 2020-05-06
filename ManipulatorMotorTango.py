@@ -49,7 +49,7 @@ class ManipulatorMotorTANGO(Device, metaclass=DeviceMeta):
         self.active_controlKey_action = None
         self.active_controlKey_action_lock = threading.Lock()
         self.device_stop_requested = threading.Event()
-        self.next_action_queue = queue.SimpleQueue()
+        self.next_action_queue = queue.Queue()
         self.next_chunk_ready = threading.Event()
         self.chunk_start_thread = threading.Thread(target=self.chunk_start_thread_method, daemon=True)
         self.pulse_thread = threading.Thread(target=self.pulse_thread_method, daemon=True)
