@@ -25,8 +25,6 @@ class PIStageTango(Device, metaclass=DeviceMeta):
         # redirect stdout to store last line
         sys.stdout = TangoHelper.StoreStdOut()
 
-    cmd_connect = attribute(access=AttrWriteType.WRITE)
-
     @command
     def connect(self):
         self.set_state(DevState.INIT)
@@ -35,15 +33,17 @@ class PIStageTango(Device, metaclass=DeviceMeta):
         else:
             self.set_state(DevState.FAULT)
 
+    cmd_connect = attribute(access=AttrWriteType.WRITE)
+
     def write_cmd_connect(self, _):
         self.connect()
-
-    cmd_disconnect = attribute(access=AttrWriteType.WRITE)
 
     @command
     def disconnect(self):
         self.stage.disconnect()
         self.set_state(DevState.OFF)
+
+    cmd_disconnect = attribute(access=AttrWriteType.WRITE)
 
     def write_cmd_disconnect(self, _):
         self.disconnect()
@@ -91,33 +91,29 @@ class PIStageTango(Device, metaclass=DeviceMeta):
     def read_position_unshifted_um(self):
         return self.stage.position_unshifted_get() * 1000.0  # unit conversion [mm -> um]
 
-    cmd_move_absolute = attribute(access=AttrWriteType.WRITE,
-                                  dtype=float,
-                                  unit="mm")
-
     @command(dtype_in=float)
     def move_absolute(self, new_pos):
         self.set_state(DevState.MOVING)
         self.stage.move_absolute(new_pos)
 
+    cmd_move_absolute = attribute(access=AttrWriteType.WRITE,
+                                  dtype=float,
+                                  unit="mm")
+
     def write_cmd_move_absolute(self, new_pos):
         self.move_absolute(new_pos)
-
-    cmd_move_absolute_um = attribute(access=AttrWriteType.WRITE,
-                                     dtype=float,
-                                     unit="um")
 
     @command(dtype_in=float)
     def move_absolute_um(self, new_pos_um):
         new_pos_mm = new_pos_um / 1000.0
         self.move_absolute(new_pos_mm)
 
-    def write_cmd_move_absolute_um(self, new_pos):
-        self.move_absolute_um(new_pos)
-
-    cmd_move_relative_um = attribute(access=AttrWriteType.WRITE,
+    cmd_move_absolute_um = attribute(access=AttrWriteType.WRITE,
                                      dtype=float,
                                      unit="um")
+
+    def write_cmd_move_absolute_um(self, new_pos):
+        self.move_absolute_um(new_pos)
 
     @command(dtype_in=float)
     def move_absolute_fs(self, new_pos_fs):
@@ -125,17 +121,21 @@ class PIStageTango(Device, metaclass=DeviceMeta):
         new_pos_mm = new_pos_fs*299792458.0*10**(-12)/2
         self.move_absolute(new_pos_mm)
 
-    def write_cmd_move_absolute_fs(self, new_pos):
-        self.move_absolute_fs(new_pos)
-
-    cmd_move_relative_fs = attribute(access=AttrWriteType.WRITE,
+    cmd_move_absolute_fs = attribute(access=AttrWriteType.WRITE,
                                      dtype=float,
                                      unit="fs")
+
+    def write_cmd_move_absolute_fs(self, new_pos):
+        self.move_absolute_fs(new_pos)
 
     @command(dtype_in=float)
     def move_relative_um(self, step_um):
         step_mm = step_um/1000.0
         self.move_relative(step_mm)
+
+    cmd_move_relative_um = attribute(access=AttrWriteType.WRITE,
+                                     dtype=float,
+                                     unit="um")
 
     def write_cmd_move_relative_um(self, step_um):
         self.move_relative_um(step_um)
@@ -185,31 +185,31 @@ class PIStageTango(Device, metaclass=DeviceMeta):
         velocity_mmps = velocity_umps / 1000.0
         self.stage.pi_set_velocity(velocity_mmps)
 
-    cmd_set_zero_position = attribute(access=AttrWriteType.WRITE)
-
     @command
     def set_zero_position(self):
         self.stage.set_zero_position()
 
+    cmd_set_zero_position = attribute(access=AttrWriteType.WRITE)
+
     def write_cmd_set_zero_position(self, _):
         self.set_zero_position()
-
-    cmd_zero_reference_move = attribute(access=AttrWriteType.WRITE)
 
     @command
     def zero_reference_move(self):
         self.stage.pi_zero_reference_move()
         self.stage.pi_handle_limits()
 
+    cmd_zero_reference_move = attribute(access=AttrWriteType.WRITE)
+
     def write_cmd_zero_reference_move(self, _):
         self.zero_reference_move()
-
-    cmd_stop_motion = attribute(access=AttrWriteType.WRITE)
 
     @command
     def stop_motion(self):
         self.stage.pi_stop_motion()
         self.set_state(DevState.ON)
+
+    cmd_stop_motion = attribute(access=AttrWriteType.WRITE)
 
     def write_cmd_stop_motion(self, _):
         self.stop_motion()
@@ -218,11 +218,6 @@ class PIStageTango(Device, metaclass=DeviceMeta):
     def last_error(self):
         return str(self.stage.last_error)
 
-    cmd_move_step = attribute(access=AttrWriteType.WRITE,
-                              dtype=float,
-                              label="moves stage by pregiven step in input direction",
-                              doc="moves stage by pregiven step in input direction")
-
     @command(dtype_in=float)
     def move_step(self, direction):
         self.set_state(DevState.MOVING)
@@ -230,6 +225,11 @@ class PIStageTango(Device, metaclass=DeviceMeta):
             self.stage.move_relative(self.move_step_size)
         else:
             self.stage.move_relative(-1 * self.move_step_size)
+
+    cmd_move_step = attribute(access=AttrWriteType.WRITE,
+                              dtype=float,
+                              label="moves stage by pregiven step in input direction",
+                              doc="moves stage by pregiven step in input direction")
 
     def write_cmd_move_step(self, direction):
         self.move_step(direction)
