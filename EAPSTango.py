@@ -160,7 +160,7 @@ class EAPSTango(Device, metaclass=DeviceMeta):
                                           'set_voltage': set_voltage,
                                           'set_current': set_current}
 
-    @attribute(dtype=float, unit='U')
+    @attribute(dtype=float, unit='V')
     def c1_actual_voltage(self):
         if self.get_state() == DevState.ON:
             try:
@@ -171,7 +171,7 @@ class EAPSTango(Device, metaclass=DeviceMeta):
                 self.eaps.disconnect()
                 print('ERROR: port not open')
 
-    @attribute(dtype=float, unit='U')
+    @attribute(dtype=float, unit='V')
     def c2_actual_voltage(self):
         if self.get_state() == DevState.ON:
             try:
