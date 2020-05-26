@@ -39,16 +39,17 @@ def connect_by_serial_number(serial_connection, serial_number, idn_message='*IDN
     # try connections to find right serial number
     for comport in list_ports.comports():
         serial_connection.port = comport.device
+        serial_connection.open()
+        print('test connection established to device: %s' % comport.device, end='')
 
         try:
             # lock port to prevent access from multiple scripts
             fcntl.flock(serial_connection.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as error_message:
             print('device: %s not tested. device blocked:\n%s' % (comport.device, error_message))
+            serial_connection.close()
             continue
 
-        serial_connection.open()
-        print('test connection establishing to device: %s' % comport.device, end='')
         try:
             serial_connection.write(idn_message.encode())
             idn_line = serial_connection.readline()
