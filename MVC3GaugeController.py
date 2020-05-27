@@ -4,6 +4,7 @@ device control class for the VACOM MVC3 vacuum gauge controller
 
 import serial
 import TangoHelper
+import time #todo:remove
 
 
 class MVC3GaugeController:
@@ -72,12 +73,26 @@ class MVC3GaugeController:
 
         self.ser.write(('RPV%s\r' % channel).encode())
         answer = self.ser.read_until(b'\r').decode().strip().split('\t')
+
+        if len(answer) < 2:  # detects invalid empty answer
+
+            # set back connection parameters
+            print('ERROR: invalid device answer. trying to reset connection parameters')
+            self.ser.baudrate = 19200
+            self.ser.timeout = 1
+            self.ser.bytesize = 8
+            self.ser.parity = serial.PARITY_NONE
+            self.ser.stopbits = 1
+            return 'ERROR: invalid device answer'
+
         if answer[0] == '?':
             if answer[1] == 'S,':
                 # no sensor on this channel connected
                 return 'no sensor'
             else:
                 return 'ERROR: device reports error info %s' % answer
+
+        # normal pressure return
         return "{:.{}e}".format(float(answer[1]), decimal_places) + status_messages[int(answer[0].strip(','))]
 
 

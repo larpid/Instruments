@@ -38,6 +38,10 @@ class MVC3GaugeControllerTango(Device, metaclass=DeviceMeta):
         self.set_state(DevState.OFF)
         self.connect()  # try to auto connect on server start. can also be done manually
 
+    def delete_device(self):
+        self.mvc3.disconnect()
+        print('device deleted')
+
     @attribute(dtype=str)
     def server_message(self):
         return sys.stdout.read_stored_message()
@@ -66,12 +70,21 @@ class MVC3GaugeControllerTango(Device, metaclass=DeviceMeta):
     def write_cmd_disconnect(self, _):
         self.disconnect()
 
+    cmd_reconnect = attribute(access=AttrWriteType.WRITE)
+
+    def write_cmd_reconnect(self, _):
+        self.disconnect()
+        self.connect()
+
     @attribute(dtype=str, #unit='mBar',
                access=AttrWriteType.READ)
     def P1(self):
         """writes out errors and info too"""
         try:
-            return self.mvc3.read_pressure(1, decimal_places=self.pressure_decimal_places)
+            pressure = self.mvc3.read_pressure(1, decimal_places=self.pressure_decimal_places)
+            if self.get_state() == DevState.FAULT:
+                self.set_state(DevState.ON)
+            return pressure
         # yes, general exception catching is not good but cs studio otherwise hides this completely (even worse)
         except Exception as e:
             self.set_state(DevState.FAULT)
@@ -81,7 +94,10 @@ class MVC3GaugeControllerTango(Device, metaclass=DeviceMeta):
     def P2(self):
         """writes out errors and info too"""
         try:
-            return self.mvc3.read_pressure(2, decimal_places=self.pressure_decimal_places)
+            pressure = self.mvc3.read_pressure(2, decimal_places=self.pressure_decimal_places)
+            if self.get_state() == DevState.FAULT:
+                self.set_state(DevState.ON)
+            return pressure
         # yes, general exception catching is not good but cs studio otherwise hides this completely (even worse)
         except Exception as e:
             self.set_state(DevState.FAULT)
@@ -91,7 +107,10 @@ class MVC3GaugeControllerTango(Device, metaclass=DeviceMeta):
     def P3(self):
         """writes out errors and info too"""
         try:
-            return self.mvc3.read_pressure(3, decimal_places=self.pressure_decimal_places)
+            pressure = self.mvc3.read_pressure(3, decimal_places=self.pressure_decimal_places)
+            if self.get_state() == DevState.FAULT:
+                self.set_state(DevState.ON)
+            return pressure
         # yes, general exception catching is not good but cs studio otherwise hides this completely (even worse)
         except Exception as e:
             self.set_state(DevState.FAULT)
